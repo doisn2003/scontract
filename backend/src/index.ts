@@ -3,6 +3,8 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import connectDB from './config/db.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import authRoutes from './routes/authRoutes.js';
+import walletRoutes from './routes/walletRoutes.js';
 
 dotenv.config();
 
@@ -16,13 +18,9 @@ app.use(express.urlencoded({ extended: true }));
 // Database connection
 connectDB();
 
-// --- Routes will be registered here in Phase 1+ ---
-// app.use('/api/auth', authRoutes);
-// app.use('/api/wallets', walletRoutes);
-// app.use('/api/faucet', faucetRoutes);
-// app.use('/api/projects', projectRoutes);
-// app.use('/api/explore', exploreRoutes);
-// app.use('/api/transactions', transactionRoutes);
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/wallets', walletRoutes);
 
 // Health check
 app.get('/', (_req, res) => {
