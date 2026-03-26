@@ -4,19 +4,65 @@ import { encrypt, decrypt } from '../utils/encryption.js';
 import type { WalletType } from '../types/index.js';
 
 /**
- * Create a new random wallet for a user.
+ * BIP44 Derivation Path for BSC/Ethereum:
+ * m/44'/60'/0'/0/{index}
+ *
+ * - 44'  = BIP44 standard
+ * - 60'  = Ethereum/BSC coin type
+ * - 0'   = account
+ * - 0    = external chain
+ * - {i}  = address index (incremented per owner wallet)
+ */
+const BIP44_BASE_PATH = "m/44'/60'/0'/0";
+
+/**
+ * Create a new wallet for a user.
+ * - walletType 'owner': Derived from Master Mnemonic via BIP44 HD Wallet
+ * - walletType 'user':  Generated randomly (ethers.Wallet.createRandom)
  */
 export async function createWallet(
   userId: string,
   walletType: WalletType = 'user',
   label: string = 'My Wallet'
 ) {
-  // Generate a random wallet
-  const randomWallet = ethers.Wallet.createRandom();
-  const address = randomWallet.address.toLowerCase();
-  const privateKey = randomWallet.privateKey;
+  let address: string;
+  let privateKey: string;
+  let derivationIndex: number | null = null;
 
-  // Encrypt the private key before storing
+  if (walletType === 'owner') {
+    // ===== Owner Wallet: HD derivation from Master Mnemonic =====
+    const mnemonic = process.env.MASTER_MNEMONIC;
+    if (!mnemonic) {
+      throw new Error('MASTER_MNEMONIC is not configured in .env');
+    }
+
+    // Determine next derivation index
+    const lastOwnerWallet = await Wallet.findOne({ walletType: 'owner' })
+      .sort({ derivationIndex: -1 })
+      .select('derivationIndex')
+      .lean();
+
+    derivationIndex = lastOwnerWallet?.derivationIndex != null
+      ? lastOwnerWallet.derivationIndex + 1
+      : 0;
+
+    // Derive wallet from mnemonic using BIP44 path
+    const hdNode = ethers.HDNodeWallet.fromPhrase(
+      mnemonic,
+      undefined,            // no password
+      `${BIP44_BASE_PATH}/${derivationIndex}`
+    );
+
+    address = hdNode.address.toLowerCase();
+    privateKey = hdNode.privateKey;
+  } else {
+    // ===== User Wallet: Random generation =====
+    const randomWallet = ethers.Wallet.createRandom();
+    address = randomWallet.address.toLowerCase();
+    privateKey = randomWallet.privateKey;
+  }
+
+  // Encrypt the private key before storing (AES-256-CBC)
   const encryptedPrivateKey = encrypt(privateKey);
 
   // Save to DB
@@ -26,6 +72,7 @@ export async function createWallet(
     encryptedPrivateKey,
     walletType,
     label,
+    derivationIndex,
   });
 
   return {
@@ -33,6 +80,7 @@ export async function createWallet(
     address: wallet.address,
     walletType: wallet.walletType,
     label: wallet.label,
+    derivationIndex: wallet.derivationIndex,
     createdAt: wallet.createdAt,
   };
 }

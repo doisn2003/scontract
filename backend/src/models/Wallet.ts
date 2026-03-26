@@ -31,6 +31,10 @@ const walletSchema = new Schema<IWallet>(
       trim: true,
       maxlength: [30, 'Label cannot exceed 30 characters'],
     },
+    derivationIndex: {
+      type: Number,
+      default: null,
+    },
   },
   {
     timestamps: true,

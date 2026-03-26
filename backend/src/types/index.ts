@@ -52,6 +52,7 @@ export interface IWallet extends Document {
   encryptedPrivateKey: string;
   walletType: WalletType;
   label: string;
+  derivationIndex: number | null;
   createdAt: Date;
 }
 
