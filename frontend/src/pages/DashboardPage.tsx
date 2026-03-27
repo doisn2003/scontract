@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   HiOutlineWallet,
@@ -9,15 +10,29 @@ import {
   HiOutlineCpuChip,
 } from 'react-icons/hi2';
 import PageWrapper from '../components/Layout/PageWrapper';
+import api from '../services/api';
+import type { ApiResponse, Wallet } from '../types';
 import './DashboardPage.css';
 
 export default function DashboardPage() {
-  // TODO: Phase 1 — fetch real data from API
-  const stats = {
-    wallets: 0,
-    projects: 0,
-    transactions: 0,
-  };
+  const [walletCount, setWalletCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const { data } = await api.get<ApiResponse<Wallet[]>>('/wallets');
+        if (data.success && data.data) {
+          setWalletCount(data.data.length);
+        }
+      } catch {
+        // silent fail
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
 
   return (
     <PageWrapper title="Dashboard" subtitle="Overview of your SContract workspace">
@@ -29,7 +44,9 @@ export default function DashboardPage() {
           </div>
           <div className="stat-info">
             <h3>Wallets</h3>
-            <div className="stat-value">{stats.wallets}</div>
+            <div className="stat-value">
+              {isLoading ? <div className="skeleton" style={{ width: 40, height: 36 }} /> : walletCount}
+            </div>
           </div>
         </div>
 
@@ -39,7 +56,7 @@ export default function DashboardPage() {
           </div>
           <div className="stat-info">
             <h3>Projects</h3>
-            <div className="stat-value">{stats.projects}</div>
+            <div className="stat-value">0</div>
           </div>
         </div>
 
@@ -49,7 +66,7 @@ export default function DashboardPage() {
           </div>
           <div className="stat-info">
             <h3>Transactions</h3>
-            <div className="stat-value">{stats.transactions}</div>
+            <div className="stat-value">0</div>
           </div>
         </div>
 

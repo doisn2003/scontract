@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import {
   HiOutlineSquares2X2,
   HiOutlineWallet,
@@ -8,16 +8,11 @@ import {
   HiOutlineClock,
   HiOutlineArrowRightOnRectangle,
 } from 'react-icons/hi2';
+import { useAuth } from '../../context/AuthContext';
 import './Sidebar.css';
 
 export default function Sidebar() {
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    localStorage.removeItem('scontract_token');
-    localStorage.removeItem('scontract_user');
-    navigate('/login');
-  };
+  const { logout } = useAuth();
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `sidebar-link ${isActive ? 'active' : ''}`;
@@ -69,7 +64,7 @@ export default function Sidebar() {
       <div className="sidebar-spacer" />
 
       <div className="sidebar-footer">
-        <button className="sidebar-link" onClick={handleLogout} style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer' }}>
+        <button className="sidebar-link" onClick={logout} style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer' }}>
           <span className="sidebar-icon"><HiOutlineArrowRightOnRectangle /></span>
           Logout
         </button>

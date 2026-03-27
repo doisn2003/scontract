@@ -1,19 +1,45 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { HiOutlineCube } from 'react-icons/hi2';
+import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 import './AuthPage.css';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error] = useState('');
-  const [isLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { register } = useAuth();
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Phase 1 — integrate auth API
-    console.log('Register:', { name, email, password });
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const result = await register({ name, email, password });
+      if (result.walletAddress) {
+        toast.success(`Wallet created: ${result.walletAddress.slice(0, 8)}...${result.walletAddress.slice(-6)}`, {
+          duration: 6000,
+        });
+      }
+      toast.success('Registration successful!');
+      navigate('/dashboard');
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosErr = err as { response?: { data?: { message?: string } } };
+        setError(axiosErr.response?.data?.message || 'Registration failed');
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Registration failed');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -41,6 +67,7 @@ export default function RegisterPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
 
@@ -54,6 +81,7 @@ export default function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
 
@@ -68,6 +96,7 @@ export default function RegisterPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
+                disabled={isLoading}
               />
             </div>
 

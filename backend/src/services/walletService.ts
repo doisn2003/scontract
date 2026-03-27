@@ -11,56 +11,67 @@ import type { WalletType } from '../types/index.js';
  * - 60'  = Ethereum/BSC coin type
  * - 0'   = account
  * - 0    = external chain
- * - {i}  = address index (incremented per owner wallet)
+ * - {i}  = address index (auto-incremented globally)
+ *
+ * ALL wallets (regardless of role) are derived from MASTER_MNEMONIC.
+ * The walletType field is purely a contextual role label:
+ *   - 'owner': user deployed a contract with this wallet
+ *   - 'user':  user interacts with others' contracts via this wallet
+ * A single wallet CAN serve both roles depending on context.
  */
 const BIP44_BASE_PATH = "m/44'/60'/0'/0";
 
 /**
+ * Get the next available derivation index.
+ * Uses a global counter across ALL wallets to ensure unique paths.
+ */
+async function getNextDerivationIndex(): Promise<number> {
+  const lastWallet = await Wallet.findOne({ derivationIndex: { $ne: null } })
+    .sort({ derivationIndex: -1 })
+    .select('derivationIndex')
+    .lean();
+
+  return lastWallet?.derivationIndex != null
+    ? lastWallet.derivationIndex + 1
+    : 0;
+}
+
+/**
  * Create a new wallet for a user.
- * - walletType 'owner': Derived from Master Mnemonic via BIP44 HD Wallet
- * - walletType 'user':  Generated randomly (ethers.Wallet.createRandom)
+ *
+ * ALL wallets are derived from MASTER_MNEMONIC via BIP44 HD Wallet.
+ * This ensures deterministic and recoverable key generation.
+ *
+ * The `walletType` is just a contextual role label — one wallet
+ * can be used as both 'owner' (deploy contracts) and 'user'
+ * (interact with others' contracts).
  */
 export async function createWallet(
   userId: string,
   walletType: WalletType = 'user',
   label: string = 'My Wallet'
 ) {
-  let address: string;
-  let privateKey: string;
-  let derivationIndex: number | null = null;
-
-  if (walletType === 'owner') {
-    // ===== Owner Wallet: HD derivation from Master Mnemonic =====
-    const mnemonic = process.env.MASTER_MNEMONIC;
-    if (!mnemonic) {
-      throw new Error('MASTER_MNEMONIC is not configured in .env');
-    }
-
-    // Determine next derivation index
-    const lastOwnerWallet = await Wallet.findOne({ walletType: 'owner' })
-      .sort({ derivationIndex: -1 })
-      .select('derivationIndex')
-      .lean();
-
-    derivationIndex = lastOwnerWallet?.derivationIndex != null
-      ? lastOwnerWallet.derivationIndex + 1
-      : 0;
-
-    // Derive wallet from mnemonic using BIP44 path
-    const hdNode = ethers.HDNodeWallet.fromPhrase(
-      mnemonic,
-      undefined,            // no password
-      `${BIP44_BASE_PATH}/${derivationIndex}`
+  const mnemonic = process.env.MASTER_MNEMONIC;
+  if (!mnemonic) {
+    throw new Error(
+      'MASTER_MNEMONIC is not configured in .env. ' +
+      'All wallets are derived from this mnemonic via BIP44.'
     );
-
-    address = hdNode.address.toLowerCase();
-    privateKey = hdNode.privateKey;
-  } else {
-    // ===== User Wallet: Random generation =====
-    const randomWallet = ethers.Wallet.createRandom();
-    address = randomWallet.address.toLowerCase();
-    privateKey = randomWallet.privateKey;
   }
+
+  // Get the next unique derivation index
+  const derivationIndex = await getNextDerivationIndex();
+  const derivationPath = `${BIP44_BASE_PATH}/${derivationIndex}`;
+
+  // Derive wallet from mnemonic using BIP44 path
+  const hdNode = ethers.HDNodeWallet.fromPhrase(
+    mnemonic,
+    undefined,       // no password
+    derivationPath
+  );
+
+  const address = hdNode.address.toLowerCase();
+  const privateKey = hdNode.privateKey;
 
   // Encrypt the private key before storing (AES-256-CBC)
   const encryptedPrivateKey = encrypt(privateKey);
