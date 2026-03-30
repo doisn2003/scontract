@@ -17,6 +17,12 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import WalletsPage from './pages/WalletsPage';
+import CreateProjectPage from './pages/CreateProjectPage';
+import ProjectListPage from './pages/ProjectListPage';
+import ProjectDetailPage from './pages/ProjectDetailPage';
+import ExplorePage from './pages/ExplorePage';
+import InteractPage from './pages/InteractPage';
+import TestPage from './pages/TestPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 
 /**
@@ -79,12 +85,12 @@ function AppRoutes() {
       {/* Protected routes */}
       <Route path="/dashboard" element={<ProtectedPage><DashboardPage /></ProtectedPage>} />
       <Route path="/wallets" element={<ProtectedPage><WalletsPage /></ProtectedPage>} />
-      <Route path="/projects/create" element={<ProtectedPage><PlaceholderPage title="New Project" subtitle="Upload & deploy a smart contract" /></ProtectedPage>} />
-      <Route path="/projects" element={<ProtectedPage><PlaceholderPage title="My Projects" subtitle="View all your smart contract projects" /></ProtectedPage>} />
-      <Route path="/projects/:id" element={<ProtectedPage><PlaceholderPage title="Project Detail" subtitle="View project details" /></ProtectedPage>} />
-      <Route path="/projects/:id/interact" element={<ProtectedPage><PlaceholderPage title="Interact" subtitle="Interact with your smart contract" /></ProtectedPage>} />
-      <Route path="/projects/:id/test" element={<ProtectedPage><PlaceholderPage title="Unit Tests" subtitle="Run tests on your smart contract" /></ProtectedPage>} />
-      <Route path="/explore" element={<ProtectedPage><PlaceholderPage title="Explore" subtitle="Browse deployed smart contracts" /></ProtectedPage>} />
+      <Route path="/projects/create" element={<ProtectedPage><CreateProjectPage /></ProtectedPage>} />
+      <Route path="/projects" element={<ProtectedPage><ProjectListPage /></ProtectedPage>} />
+      <Route path="/projects/:id" element={<ProtectedPage><ProjectDetailPage /></ProtectedPage>} />
+      <Route path="/projects/:id/interact" element={<ProtectedPage><InteractPage /></ProtectedPage>} />
+      <Route path="/projects/:id/test" element={<ProtectedPage><TestPage /></ProtectedPage>} />
+      <Route path="/explore" element={<ProtectedPage><ExplorePage /></ProtectedPage>} />
       <Route path="/transactions" element={<ProtectedPage><PlaceholderPage title="Transaction History" subtitle="View all your transactions" /></ProtectedPage>} />
 
       {/* Default redirect */}

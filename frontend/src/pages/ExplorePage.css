@@ -1,0 +1,96 @@
+.explore-page {
+  animation: fadeIn var(--transition-base) ease forwards;
+}
+
+.explore-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-5);
+}
+
+.explore-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  transition: all var(--transition-base);
+}
+
+.explore-card:hover {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-2px);
+}
+
+.explore-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-3);
+}
+
+.explore-card-header h3 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.explore-card-desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-4);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.explore-card-address {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-success);
+  background: var(--color-success-bg);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+  width: fit-content;
+}
+
+.explore-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.explore-card-network {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.explore-card-links {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.explore-empty {
+  text-align: center;
+  padding: var(--space-16) var(--space-8);
+}
+
+.explore-empty-icon {
+  font-size: 3rem;
+  color: var(--color-accent);
+  margin-bottom: var(--space-4);
+}
+
+.explore-empty h3 {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--space-2);
+}
+
+.explore-empty p {
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-6);
+}

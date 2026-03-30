@@ -1,14 +1,28 @@
+# Dependencies
 node_modules/
-.env
-backend/.env
 frontend/node_modules/
 backend/node_modules/
+
+# Environment Variables
+.env
+backend/.env
+frontend/.env
+
+# Build outputs
 dist/
 build/
+
+# OS Files
 .DS_Store
 
-# Blockchain Artifacts
-# We only want to keep the ABIs for the app to function in production.
-# But build logs and debug files are too heavy for Git.
+# Blockchain / Hardhat Artifacts
 artifacts/
 cache/
+/cache
+/artifacts
+/typechain
+/typechain-types
+/coverage
+/coverage.json
+ignition/deployments/chain-31337
+/ignition/
