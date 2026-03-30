@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 import PageWrapper from '../components/Layout/PageWrapper';
 import api from '../services/api';
 import type { Wallet, ApiResponse } from '../types';
+import FaucetButton from '../components/Wallet/FaucetButton';
 import './WalletsPage.css';
 
 export default function WalletsPage() {
@@ -203,17 +204,23 @@ export default function WalletsPage() {
                   <button
                     className="btn btn-secondary btn-sm"
                     onClick={() => handleShowPK(wallet._id)}
+                    title="View Private Key"
                   >
-                    <HiOutlineKey /> Private Key
+                    <HiOutlineKey /> PK
                   </button>
-                  {balances[wallet._id] !== undefined && (
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => fetchBalance(wallet._id)}
-                    >
-                      <HiOutlineArrowPath />
-                    </button>
-                  )}
+                  
+                  <FaucetButton 
+                    address={wallet.address} 
+                    onSuccess={() => fetchBalance(wallet._id)} 
+                  />
+
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => fetchBalance(wallet._id)}
+                    title="Check Balance"
+                  >
+                    <HiOutlineArrowPath />
+                  </button>
                 </div>
               </div>
             ))}
