@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { HiOutlineCube } from 'react-icons/hi2';
+import MetaMaskButton from '../MetaMask/MetaMaskButton';
 import './Navbar.css';
 
 interface NavbarProps {
@@ -23,6 +24,7 @@ export default function Navbar({ userName }: NavbarProps) {
       </Link>
 
       <div className="navbar-actions">
+        <MetaMaskButton />
         {userName && (
           <div className="navbar-user">
             <div className="navbar-avatar">{initials}</div>
