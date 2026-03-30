@@ -6,6 +6,8 @@ import { errorHandler } from './middleware/errorHandler.js';
 import authRoutes from './routes/authRoutes.js';
 import walletRoutes from './routes/walletRoutes.js';
 import faucetRoutes from './routes/faucetRoutes.js';
+import projectRoutes from './routes/projectRoutes.js';
+import exploreRoutes from './routes/exploreRoutes.js';
 
 import { globalLimiter } from './middleware/rateLimiter.js';
 
@@ -29,6 +31,8 @@ connectDB();
 app.use('/api/auth', authRoutes);
 app.use('/api/wallets', walletRoutes);
 app.use('/api/faucet', faucetRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api/explore', exploreRoutes);
 
 // Health check
 app.get('/', (_req, res) => {
