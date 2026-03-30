@@ -10,7 +10,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // 30s timeout
+  timeout: 120000, // 120s timeout — Docker compile + blockchain deploy can take 30-60s
 });
 
 // Request interceptor: attach JWT token
