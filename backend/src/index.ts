@@ -8,7 +8,7 @@ import walletRoutes from './routes/walletRoutes.js';
 import faucetRoutes from './routes/faucetRoutes.js';
 import projectRoutes from './routes/projectRoutes.js';
 import exploreRoutes from './routes/exploreRoutes.js';
-
+import testRoutes from './routes/testRoutes.js';
 import { globalLimiter } from './middleware/rateLimiter.js';
 
 dotenv.config();
@@ -33,6 +33,7 @@ app.use('/api/wallets', walletRoutes);
 app.use('/api/faucet', faucetRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/explore', exploreRoutes);
+app.use('/api/tests', testRoutes);
 
 // Health check
 app.get('/', (_req, res) => {
