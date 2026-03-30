@@ -240,6 +240,13 @@ export default function ProjectDetailPage() {
               <HiOutlineCodeBracket /> Interact with Contract
             </Link>
           )}
+
+          {/* Test button — available after compilation */}
+          {(project.status === 'compiled' || project.status === 'deployed') && (
+            <Link to={`/projects/${project._id}/test`} className="btn btn-secondary">
+              🧪 Run Tests
+            </Link>
+          )}
         </div>
 
         {/* Error Messages */}
