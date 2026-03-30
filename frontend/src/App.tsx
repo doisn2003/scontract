@@ -21,6 +21,8 @@ import CreateProjectPage from './pages/CreateProjectPage';
 import ProjectListPage from './pages/ProjectListPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import ExplorePage from './pages/ExplorePage';
+import InteractPage from './pages/InteractPage';
+import TestPage from './pages/TestPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 
 /**
@@ -86,8 +88,8 @@ function AppRoutes() {
       <Route path="/projects/create" element={<ProtectedPage><CreateProjectPage /></ProtectedPage>} />
       <Route path="/projects" element={<ProtectedPage><ProjectListPage /></ProtectedPage>} />
       <Route path="/projects/:id" element={<ProtectedPage><ProjectDetailPage /></ProtectedPage>} />
-      <Route path="/projects/:id/interact" element={<ProtectedPage><PlaceholderPage title="Interact" subtitle="Interact with your smart contract" /></ProtectedPage>} />
-      <Route path="/projects/:id/test" element={<ProtectedPage><PlaceholderPage title="Unit Tests" subtitle="Run tests on your smart contract" /></ProtectedPage>} />
+      <Route path="/projects/:id/interact" element={<ProtectedPage><InteractPage /></ProtectedPage>} />
+      <Route path="/projects/:id/test" element={<ProtectedPage><TestPage /></ProtectedPage>} />
       <Route path="/explore" element={<ProtectedPage><ExplorePage /></ProtectedPage>} />
       <Route path="/transactions" element={<ProtectedPage><PlaceholderPage title="Transaction History" subtitle="View all your transactions" /></ProtectedPage>} />
 
