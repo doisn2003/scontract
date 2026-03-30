@@ -1,0 +1,119 @@
+.create-project-form {
+  max-width: 800px;
+  animation: fadeIn var(--transition-base) ease forwards;
+}
+
+.form-section {
+  margin-bottom: var(--space-6);
+}
+
+.form-row {
+  display: flex;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+@media (max-width: 640px) {
+  .form-row {
+    flex-direction: column;
+  }
+}
+
+.form-warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+}
+
+.form-warning a {
+  color: var(--color-warning);
+  text-decoration: underline;
+}
+
+/* Drop Zone */
+.drop-zone {
+  border: 2px dashed var(--color-border-light);
+  border-radius: var(--radius-xl);
+  padding: var(--space-10) var(--space-6);
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  background: var(--color-bg-input);
+}
+
+.drop-zone:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-light);
+}
+
+.drop-zone.has-file {
+  border-color: var(--color-success);
+  border-style: solid;
+  background: var(--color-success-bg);
+}
+
+.drop-zone-icon {
+  font-size: 2.5rem;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-3);
+  display: block;
+}
+
+.drop-zone-icon.loaded {
+  color: var(--color-success);
+}
+
+.drop-zone-text {
+  display: block;
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.drop-zone-filename {
+  display: block;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-success);
+  margin-bottom: var(--space-1);
+}
+
+.drop-zone-hint {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.drop-zone-empty,
+.drop-zone-loaded {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Source Textarea */
+.source-textarea {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 200px;
+  tab-size: 4;
+}
+
+.char-count {
+  font-weight: var(--font-weight-normal);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+/* Actions */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}

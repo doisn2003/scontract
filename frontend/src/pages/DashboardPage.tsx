@@ -11,19 +11,26 @@ import {
 } from 'react-icons/hi2';
 import PageWrapper from '../components/Layout/PageWrapper';
 import api from '../services/api';
-import type { ApiResponse, Wallet } from '../types';
+import type { ApiResponse, Wallet, Project } from '../types';
 import './DashboardPage.css';
 
 export default function DashboardPage() {
   const [walletCount, setWalletCount] = useState(0);
+  const [projectCount, setProjectCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const { data } = await api.get<ApiResponse<Wallet[]>>('/wallets');
-        if (data.success && data.data) {
-          setWalletCount(data.data.length);
+        const [walletsRes, projectsRes] = await Promise.all([
+          api.get<ApiResponse<Wallet[]>>('/wallets'),
+          api.get<ApiResponse<Project[]>>('/projects'),
+        ]);
+        if (walletsRes.data.success && walletsRes.data.data) {
+          setWalletCount(walletsRes.data.data.length);
+        }
+        if (projectsRes.data.success && projectsRes.data.data) {
+          setProjectCount(projectsRes.data.data.length);
         }
       } catch {
         // silent fail
@@ -56,7 +63,9 @@ export default function DashboardPage() {
           </div>
           <div className="stat-info">
             <h3>Projects</h3>
-            <div className="stat-value">0</div>
+            <div className="stat-value">
+              {isLoading ? <div className="skeleton" style={{ width: 40, height: 36 }} /> : projectCount}
+            </div>
           </div>
         </div>
 
