@@ -66,13 +66,11 @@ export const compileProject = async (req: Request, res: Response): Promise<void>
     if (!projectId) { sendError(res, 'Project ID is required', 400); return; }
 
     const result = await projectService.compileProject(projectId, userId);
-
     sendSuccess(res, 'Compilation successful', result);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Compilation failed';
-    // Compilation errors are client-side issues (bad Solidity code)
+  } catch (error: any) {
+    const message = error.message || 'Compilation failed';
     const statusCode = message.includes('not found') ? 404 : 400;
-    sendError(res, message, statusCode);
+    sendError(res, message, statusCode, error.details);
   }
 };
 

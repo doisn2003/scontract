@@ -21,6 +21,8 @@
     "viem": "^2.47.6"
   },
   "dependencies": {
+    "@openzeppelin/contracts": "^5.0.0",
+    "@openzeppelin/contracts-upgradeable": "^5.0.0",
     "lucide-react": "^1.7.0"
   }
 }
