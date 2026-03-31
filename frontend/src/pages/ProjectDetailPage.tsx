@@ -12,6 +12,9 @@ import {
   HiOutlineChevronRight,
   HiOutlineExclamationTriangle,
   HiOutlineCpuChip,
+  HiOutlinePencilSquare,
+  HiOutlineCheck,
+  HiOutlineXMark,
 } from 'react-icons/hi2';
 import toast from 'react-hot-toast';
 import PageWrapper from '../components/Layout/PageWrapper';
@@ -31,6 +34,13 @@ export default function ProjectDetailPage() {
   const [showSource, setShowSource] = useState(false);
   const [showAbi, setShowAbi] = useState(false);
 
+  // Editing states
+  const [isEditingMetadata, setIsEditingMetadata] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [sourceCode, setSourceCode] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
   const fetchProject = useCallback(async () => {
     if (!id) return;
     try {
@@ -38,6 +48,9 @@ export default function ProjectDetailPage() {
       const { data } = await api.get<ApiResponse<Project>>(`/projects/${id}`);
       if (data.success && data.data) {
         setProject(data.data);
+        setEditName(data.data.name);
+        setEditDesc(data.data.description || '');
+        setSourceCode(data.data.soliditySource);
       }
     } catch {
       toast.error('Failed to load project');
@@ -48,9 +61,45 @@ export default function ProjectDetailPage() {
 
   useEffect(() => { fetchProject(); }, [fetchProject]);
 
+  const isSourceDirty = project ? sourceCode !== project.soliditySource : false;
+
+  // ─── Save Updates ───
+  const handleUpdate = async (updates: { name?: string; description?: string; soliditySource?: string }) => {
+    if (!id) return false;
+    setIsSaving(true);
+    try {
+      const { data } = await api.patch<ApiResponse<Project>>(`/projects/${id}`, updates);
+      if (data.success && data.data) {
+        setProject(data.data);
+        return true;
+      }
+      return false;
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Update failed');
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveMetadata = async () => {
+    const success = await handleUpdate({ name: editName, description: editDesc });
+    if (success) {
+      setIsEditingMetadata(false);
+      toast.success('Project updated');
+    }
+  };
+
   // ─── Compile ───
   const handleCompile = async () => {
     if (!id) return;
+
+    // Auto-save if source changed
+    if (isSourceDirty) {
+      const saved = await handleUpdate({ soliditySource: sourceCode });
+      if (!saved) return; // Stop if save failed
+    }
+
     setIsCompiling(true);
     setCompileError('');
     try {
@@ -128,7 +177,45 @@ export default function ProjectDetailPage() {
   ];
 
   return (
-    <PageWrapper title={project.name} subtitle={project.description || t('pages.projects.detail.subtitle_fallback')}>
+    <PageWrapper 
+      title={isEditingMetadata ? (
+        <input 
+          className="edit-title-input"
+          value={editName}
+          onChange={(e) => setEditName(e.target.value)}
+          placeholder="Project Title"
+        />
+      ) : project!.name} 
+      subtitle={isEditingMetadata ? (
+        <div className="edit-metadata-actions">
+          <textarea 
+            className="edit-desc-input"
+            value={editDesc}
+            onChange={(e) => setEditDesc(e.target.value)}
+            placeholder="Project Description"
+          />
+          <div className="edit-buttons">
+            <button className="btn btn-primary btn-sm" onClick={handleSaveMetadata} disabled={isSaving}>
+              <HiOutlineCheck /> Save
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={() => {
+              setIsEditingMetadata(false);
+              setEditName(project!.name);
+              setEditDesc(project!.description || '');
+            }}>
+              <HiOutlineXMark /> Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="subtitle-container">
+          <span>{project!.description || t('pages.projects.detail.subtitle_fallback')}</span>
+          <button className="edit-icon-btn" onClick={() => setIsEditingMetadata(true)} title="Edit Title & Description">
+            <HiOutlinePencilSquare />
+          </button>
+        </div>
+      )}
+    >
       <div className="detail-page">
         {/* Status Pipeline */}
         <div className="pipeline-bar">
@@ -148,39 +235,39 @@ export default function ProjectDetailPage() {
           <div className="detail-info-card">
             <h4>Status</h4>
             <span className={`badge ${
-              project.status === 'deployed' ? 'badge-success' 
-              : project.status === 'compiled' ? 'badge-warning'
+              project!.status === 'deployed' ? 'badge-success' 
+              : project!.status === 'compiled' ? 'badge-warning'
               : 'badge-info'
             }`}>
-              {project.status}
+              {project!.status}
             </span>
           </div>
           <div className="detail-info-card">
             <h4>Solidity</h4>
-            <span className="detail-value">{project.solidityVersion || '—'}</span>
+            <span className="detail-value">{project!.solidityVersion || '—'}</span>
           </div>
           <div className="detail-info-card">
             <h4>Network</h4>
-            <span className="detail-value">{project.network}</span>
+            <span className="detail-value">{project!.network}</span>
           </div>
           <div className="detail-info-card">
             <h4>Created</h4>
-            <span className="detail-value">{new Date(project.createdAt).toLocaleDateString('vi-VN')}</span>
+            <span className="detail-value">{new Date(project!.createdAt).toLocaleDateString('vi-VN')}</span>
           </div>
         </div>
 
         {/* Contract Address (if deployed) */}
-        {project.contractAddress && (
+        {project!.contractAddress && (
           <div className="detail-section deployed-section">
             <div className="deployed-header">
               <HiOutlineRocketLaunch className="deployed-icon" />
               <div>
                 <h3>Contract Deployed</h3>
                 <div className="deployed-address mono">
-                  {project.contractAddress}
+                  {project!.contractAddress}
                   <button
                     className="copy-btn"
-                    onClick={() => copyToClipboard(project.contractAddress!, 'Address')}
+                    onClick={() => copyToClipboard(project!.contractAddress!, 'Address')}
                     title="Copy address"
                   >
                     <HiOutlineDocumentDuplicate />
@@ -189,7 +276,7 @@ export default function ProjectDetailPage() {
               </div>
             </div>
             <a
-              href={`https://testnet.bscscan.com/address/${project.contractAddress}`}
+              href={`https://testnet.bscscan.com/address/${project!.contractAddress}`}
               target="_blank"
               rel="noopener noreferrer"
               className="btn btn-secondary btn-sm"
@@ -200,13 +287,13 @@ export default function ProjectDetailPage() {
         )}
 
         {/* Gas Estimate before Deploy */}
-        {project.status === 'compiled' && id && (
+        {project!.status === 'compiled' && id && (
           <DeployGasEstimate projectId={id} />
         )}
 
         {/* Action Buttons */}
         <div className="detail-actions">
-          {project.status === 'created' && (
+          {project!.status === 'created' && (
             <button
               className="btn btn-primary btn-lg"
               onClick={handleCompile}
@@ -220,12 +307,13 @@ export default function ProjectDetailPage() {
             </button>
           )}
 
-          {project.status === 'compiled' && (
+          {project!.status === 'compiled' && (
             <>
               <button
                 className="btn btn-secondary"
                 onClick={handleCompile}
-                disabled={isCompiling}
+                disabled={isCompiling || !isSourceDirty}
+                title={isSourceDirty ? 'Apply changes and re-compile' : 'No changes to compile'}
               >
                 {isCompiling ? <><span className="spinner" /> Re-compiling...</> : <><HiOutlineCpuChip /> Re-compile</>}
               </button>
@@ -243,15 +331,15 @@ export default function ProjectDetailPage() {
             </>
           )}
 
-          {project.status === 'deployed' && (
-            <Link to={`/projects/${project._id}/interact`} className="btn btn-primary btn-lg">
+          {project!.status === 'deployed' && (
+            <Link to={`/projects/${project!._id}/interact`} className="btn btn-primary btn-lg">
               <HiOutlineCodeBracket /> Interact with Contract
             </Link>
           )}
 
           {/* Test button — available after compilation */}
-          {(project.status === 'compiled' || project.status === 'deployed') && (
-            <Link to={`/projects/${project._id}/test`} className="btn btn-secondary">
+          {(project!.status === 'compiled' || project!.status === 'deployed') && (
+            <Link to={`/projects/${project!._id}/test`} className="btn btn-secondary">
               🧪 Run Tests
             </Link>
           )}
@@ -278,7 +366,7 @@ export default function ProjectDetailPage() {
         )}
 
         {/* ABI Viewer */}
-        {project.abi && project.abi.length > 0 && (
+        {project!.abi && project!.abi.length > 0 && (
           <div className="detail-section">
           <div
             className="collapsible-header"
@@ -288,10 +376,10 @@ export default function ProjectDetailPage() {
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowAbi(!showAbi); } }}
           >
             {showAbi ? <HiOutlineChevronDown /> : <HiOutlineChevronRight />}
-            <span>ABI ({project.abi.length} items)</span>
+            <span>ABI ({project!.abi.length} items)</span>
             <button
               className="copy-btn"
-              onClick={(e) => { e.stopPropagation(); copyToClipboard(JSON.stringify(project.abi, null, 2), 'ABI'); }}
+              onClick={(e) => { e.stopPropagation(); copyToClipboard(JSON.stringify(project!.abi, null, 2), 'ABI'); }}
               title="Copy ABI"
             >
               <HiOutlineDocumentDuplicate />
@@ -299,7 +387,7 @@ export default function ProjectDetailPage() {
           </div>
             {showAbi && (
               <div className="abi-list">
-                {project.abi.map((item: AbiItem, i: number) => (
+                {project!.abi.map((item: AbiItem, i: number) => (
                   <div key={i} className="abi-item">
                     <span className={`abi-type badge ${
                       item.type === 'function' ? (item.stateMutability === 'view' || item.stateMutability === 'pure' ? 'badge-info' : 'badge-warning')
@@ -323,25 +411,25 @@ export default function ProjectDetailPage() {
         )}
 
         {/* Bytecode Preview */}
-        {project.bytecode && (
+        {project!.bytecode && (
           <div className="detail-section">
             <div className="bytecode-preview">
               <span className="input-label">Bytecode</span>
-              <span className="bytecode-size">({Math.ceil(project.bytecode.length / 2)} bytes)</span>
+              <span className="bytecode-size">({Math.ceil(project!.bytecode.length / 2)} bytes)</span>
               <button
                 className="copy-btn"
-                onClick={() => copyToClipboard(project.bytecode!, 'Bytecode')}
+                onClick={() => copyToClipboard(project!.bytecode!, 'Bytecode')}
                 title="Copy Bytecode"
               >
                 <HiOutlineDocumentDuplicate />
               </button>
             </div>
-            <div className="mono bytecode-text">{project.bytecode.substring(0, 100)}...</div>
+            <div className="mono bytecode-text">{project!.bytecode.substring(0, 100)}...</div>
           </div>
         )}
 
         {/* Source Code Collapsible */}
-        {project.soliditySource && (
+        {project!.soliditySource && (
           <div className="detail-section">
           <div
             className="collapsible-header"
@@ -351,10 +439,23 @@ export default function ProjectDetailPage() {
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowSource(!showSource); } }}
           >
             {showSource ? <HiOutlineChevronDown /> : <HiOutlineChevronRight />}
-            <span>Source Code</span>
+            <span>Source Code {isSourceDirty && <span className="dirty-tag">(Edited - Click Compile to save)</span>}</span>
           </div>
             {showSource && (
-              <pre className="source-code-block">{project.soliditySource}</pre>
+              <div className="source-editor-container">
+                <textarea
+                  className="source-editor-textarea"
+                  value={sourceCode}
+                  onChange={(e) => setSourceCode(e.target.value)}
+                  readOnly={project!.status === 'deployed'}
+                  spellCheck={false}
+                />
+                {project!.status === 'deployed' && (
+                  <div className="source-lock-notice">
+                    <HiOutlineExclamationTriangle /> Source code is locked after deployment
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}

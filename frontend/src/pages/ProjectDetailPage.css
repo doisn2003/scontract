@@ -286,3 +286,133 @@
   color: var(--color-accent);
   background: var(--color-accent-light);
 }
+
+/* ─── Inline Editor Styles ─── */
+.edit-title-input {
+  width: 100%;
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  padding: var(--space-2) var(--space-3);
+  outline: none;
+  transition: all var(--transition-normal);
+  font-family: inherit;
+}
+
+.edit-title-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-light);
+}
+
+.edit-metadata-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.edit-desc-input {
+  width: 100%;
+  min-height: 80px;
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  padding: var(--space-2) var(--space-3);
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.edit-desc-input:focus {
+  border-color: var(--color-accent);
+}
+
+.edit-buttons {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.subtitle-container {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.edit-icon-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.edit-icon-btn:hover {
+  color: var(--color-accent);
+  background: var(--color-accent-light);
+}
+
+/* ─── Source Editor ─── */
+.source-editor-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.source-editor-textarea {
+  width: 100%;
+  min-height: 400px;
+  background: #0f172a; /* Slate 900 for code */
+  color: #e2e8f0; /* Slate 200 */
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  resize: vertical;
+  outline: none;
+  tab-size: 4;
+}
+
+.source-editor-textarea:focus {
+  border-color: var(--color-accent);
+}
+
+.source-editor-textarea[readonly] {
+  background: var(--color-bg-input);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+.dirty-tag {
+  color: #f59e0b; /* Amber 500 */
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  margin-left: var(--space-2);
+}
+
+.source-lock-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-input);
+  border-radius: var(--radius-md);
+  width: fit-content;
+}
+

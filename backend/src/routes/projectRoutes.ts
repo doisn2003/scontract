@@ -8,6 +8,7 @@ import {
   getProject,
   estimateDeployGas,
   deleteProject,
+  updateProject,
 } from '../controllers/projectController.js';
 
 const router = Router();
@@ -19,6 +20,7 @@ router.use(auth);
 router.post('/', createProject);           // POST /api/projects
 router.get('/', getProjects);              // GET  /api/projects
 router.get('/:id', getProject);            // GET  /api/projects/:id
+router.patch('/:id', updateProject);        // PATCH /api/projects/:id
 router.delete('/:id', deleteProject);         // DELETE /api/projects/:id
 
 // Pipeline

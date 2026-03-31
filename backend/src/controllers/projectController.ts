@@ -215,3 +215,29 @@ export const deleteProject = async (req: Request, res: Response): Promise<void> 
   }
 };
 
+/**
+ * PATCH /api/projects/:id
+ * Update project details (name, description, soliditySource).
+ */
+export const updateProject = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?.id;
+    if (!userId) { sendError(res, 'Unauthorized', 401); return; }
+
+    const projectId = req.params.id as string;
+    const updates = req.body as { name?: string; description?: string; soliditySource?: string };
+
+    const project = await projectService.updateProject(projectId, userId, updates);
+
+    sendSuccess(res, 'Project updated successfully', project);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to update project';
+    const statusCode = message.includes('not found') ? 404
+      : message.includes('Cannot edit source') ? 400
+      : 500;
+    sendError(res, message, statusCode);
+  }
+};
+
+

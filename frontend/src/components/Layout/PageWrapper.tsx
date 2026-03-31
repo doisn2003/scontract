@@ -3,8 +3,8 @@ import './PageWrapper.css';
 
 interface PageWrapperProps {
   children: ReactNode;
-  title?: string;
-  subtitle?: string;
+  title?: ReactNode;
+  subtitle?: ReactNode;
   noSidebar?: boolean;
 }
 

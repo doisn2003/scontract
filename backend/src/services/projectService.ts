@@ -301,3 +301,29 @@ export async function deleteProject(projectId: string, userId: string) {
     throw new Error('Project not found or you are not authorized to delete it');
   }
 }
+
+export async function updateProject(
+  projectId: string,
+  userId: string,
+  updates: { name?: string; description?: string; soliditySource?: string }
+) {
+  const project = await Project.findOne({ _id: projectId, userId });
+  if (!project) throw new Error('Project not found');
+
+  if (updates.name !== undefined) project.name = updates.name;
+  if (updates.description !== undefined) project.description = updates.description;
+
+  if (updates.soliditySource !== undefined) {
+    if (project.status === 'deployed') {
+      throw new Error('Cannot edit source code after contract is deployed');
+    }
+    project.soliditySource = updates.soliditySource;
+    // Re-extract metadata
+    project.solidityVersion = extractSolidityVersion(updates.soliditySource);
+    project.contractName = extractContractName(updates.soliditySource);
+  }
+
+  await project.save();
+  return project;
+}
+
