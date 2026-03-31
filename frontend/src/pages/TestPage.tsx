@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, Link } from 'react-router-dom';
 import {
   HiOutlinePlay,
@@ -38,6 +39,7 @@ interface TestResult {
 }
 
 export default function TestPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -140,8 +142,8 @@ export default function TestPage() {
 
   return (
     <PageWrapper
-      title={`Test: ${project.name}`}
-      subtitle="Write and run unit tests in a Docker sandbox (Hardhat Network)"
+      title={`${t('pages.test.title')}: ${project.name}`}
+      subtitle={t('pages.test.subtitle')}
     >
       <div className="test-page">
         {/* Top Bar */}

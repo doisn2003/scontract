@@ -1,0 +1,100 @@
+{
+  "pages": {
+    "dashboard": {
+      "subtitle": "Tổng quan về không gian làm việc SContract"
+    },
+    "wallets": {
+      "title": "Ví",
+      "subtitle": "Quản lý các ví Web3 — tạo, nạp tiền, và nhập vào MetaMask"
+    },
+    "projects": {
+      "list": {
+        "title": "Dự án của tôi",
+        "subtitle": "Xem và quản lý các dự án Smart Contract của bạn"
+      },
+      "create": {
+        "title": "Dự án mới",
+        "subtitle": "Tải lên file Solidity để biên dịch và triển khai"
+      },
+      "detail": {
+        "subtitle_fallback": "Dự án Smart Contract"
+      }
+    },
+    "explore": {
+      "title": "Khám phá",
+      "subtitle": "Khám phá các Smart Contract đã triển khai trên BSC Testnet"
+    },
+    "test": {
+      "title": "Chạy kiểm thử",
+      "subtitle": "Viết và chạy các unit test trong môi trường Docker (Hardhat Network)"
+    },
+    "history": {
+      "title": "Giao dịch",
+      "subtitle": "Lịch sử của tất cả các giao dịch on-chain của bạn"
+    },
+    "interact": {
+      "tabs": {
+        "read": "Read",
+        "write": "Write",
+        "payable": "Payable"
+      }
+    }
+  },
+  "nav": {
+    "dashboard": "Bảng điều khiển",
+    "wallets": "Ví",
+    "projects": {
+      "title": "Dự án",
+      "new": "Dự án mới",
+      "my_projects": "Dự án của tôi",
+      "explore": "Khám phá"
+    },
+    "activity": "Hoạt động",
+    "transactions": "Giao dịch",
+    "interact": "Interact",
+    "logout": "Đăng xuất"
+  },
+  "common": {
+    "search": "Tìm kiếm...",
+    "loading": "Đang tải...",
+    "error": "Lỗi",
+    "success": "Thành công",
+    "cancel": "Hủy",
+    "save": "Lưu",
+    "status": "Trạng thái",
+    "actions": "Hành động"
+  },
+  "dashboard": {
+    "greeting": "Chào mừng bạn trở lại",
+    "stats": {
+      "total_projects": "Tổng dự án",
+      "active_contracts": "Contract hoạt động",
+      "gas_saved": "Gas tiết kiệm",
+      "last_activity": "Hoạt động gần nhất",
+      "wallets": "Ví",
+      "projects": "Dự án",
+      "transactions": "Giao dịch",
+      "network": "Mạng lưới"
+    },
+    "quick_actions": {
+      "title": "Hành động nhanh",
+      "new_project": {
+        "title": "Dự án mới",
+        "desc": "Triển khai Smart Contract"
+      },
+      "explore": {
+        "title": "Khám phá",
+        "desc": "Tìm kiếm các Contract đã triển khai"
+      },
+      "manage_wallets": {
+        "title": "Quản lý ví",
+        "desc": "Tạo và nạp tiền cho ví"
+      },
+      "history": {
+        "title": "Lịch sử giao dịch",
+        "desc": "Xem các giao dịch trước đây"
+      }
+    }
+  }
+}
+

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
   HiOutlineCodeBracket,
@@ -13,6 +14,7 @@ import type { ApiResponse, Wallet, Project } from '../types';
 import './CreateProjectPage.css';
 
 export default function CreateProjectPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [walletsLoading, setWalletsLoading] = useState(true);
@@ -118,7 +120,7 @@ export default function CreateProjectPage() {
   };
 
   return (
-    <PageWrapper title="New Project" subtitle="Upload a Solidity file to compile & deploy">
+    <PageWrapper title={t('pages.projects.create.title')} subtitle={t('pages.projects.create.subtitle')}>
       <form className="create-project-form" onSubmit={handleSubmit}>
         {/* Wallet Selector */}
         <div className="form-section">

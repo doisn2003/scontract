@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   HiOutlineWallet,
   HiOutlinePlusCircle,
@@ -16,6 +17,7 @@ import FaucetButton from '../components/Wallet/FaucetButton';
 import './WalletsPage.css';
 
 export default function WalletsPage() {
+  const { t } = useTranslation();
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [balances, setBalances] = useState<Record<string, string>>({});
@@ -24,7 +26,6 @@ export default function WalletsPage() {
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showPKModal, setShowPKModal] = useState(false);
-  const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
   const [privateKey, setPrivateKey] = useState<string | null>(null);
   const [pkLoading, setPKLoading] = useState(false);
 
@@ -90,7 +91,6 @@ export default function WalletsPage() {
 
   // Show private key
   const handleShowPK = async (walletId: string) => {
-    setSelectedWalletId(walletId);
     setShowPKModal(true);
     setPKLoading(true);
     setPrivateKey(null);
@@ -116,8 +116,8 @@ export default function WalletsPage() {
 
   return (
     <PageWrapper
-      title="Wallets"
-      subtitle="Manage your Web3 wallets — create, fund, and import into MetaMask"
+      title={t('pages.wallets.title')}
+      subtitle={t('pages.wallets.subtitle')}
     >
       <div className="wallets-page">
         {/* Header with create button */}

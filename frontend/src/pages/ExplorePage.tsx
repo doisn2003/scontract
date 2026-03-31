@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
   HiOutlineGlobeAlt,
@@ -23,6 +24,7 @@ interface ExploreProject {
 }
 
 export default function ExplorePage() {
+  const { t } = useTranslation();
   const [projects, setProjects] = useState<ExploreProject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -43,7 +45,7 @@ export default function ExplorePage() {
   }, []);
 
   return (
-    <PageWrapper title="Explore" subtitle="Browse smart contracts deployed on BSC Testnet">
+    <PageWrapper title={t('pages.explore.title')} subtitle={t('pages.explore.subtitle')}>
       <div className="explore-page">
         {isLoading ? (
           <div className="explore-grid">

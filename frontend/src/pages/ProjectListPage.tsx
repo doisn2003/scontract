@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   HiOutlineFolder,
@@ -20,6 +21,7 @@ const STATUS_CONFIG: Record<ProjectStatus, { label: string; className: string; i
 };
 
 export default function ProjectListPage() {
+  const { t } = useTranslation();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
@@ -41,7 +43,7 @@ export default function ProjectListPage() {
   useEffect(() => { fetchProjects(); }, [fetchProjects]);
 
   return (
-    <PageWrapper title="My Projects" subtitle="View and manage your smart contract projects">
+    <PageWrapper title={t('pages.projects.list.title')} subtitle={t('pages.projects.list.subtitle')}>
       <div className="projects-page">
         {/* Header */}
         <div className="projects-header">

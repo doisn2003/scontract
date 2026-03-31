@@ -1,0 +1,101 @@
+{
+  "pages": {
+    "dashboard": {
+      "subtitle": "Overview of your SContract workspace"
+    },
+    "wallets": {
+      "title": "Wallets",
+      "subtitle": "Manage your Web3 wallets — create, fund, and import into MetaMask"
+    },
+    "projects": {
+      "list": {
+        "title": "My Projects",
+        "subtitle": "View and manage your smart contract projects"
+      },
+      "create": {
+        "title": "New Project",
+        "subtitle": "Upload a Solidity file to compile & deploy"
+      },
+      "detail": {
+        "subtitle_fallback": "Smart contract project"
+      }
+    },
+    "explore": {
+      "title": "Explore",
+      "subtitle": "Browse smart contracts deployed on BSC Testnet"
+    },
+    "test": {
+      "title": "Run Tests",
+      "subtitle": "Write and run unit tests in a Docker sandbox (Hardhat Network)"
+    },
+    "history": {
+      "title": "Transactions",
+      "subtitle": "History of all your on-chain transactions"
+    },
+    "interact": {
+      "tabs": {
+        "read": "Read",
+        "write": "Write",
+        "payable": "Payable"
+      },
+      "empty": "No {{type}} functions found in this contract."
+    }
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "wallets": "Wallets",
+    "projects": {
+      "title": "Projects",
+      "new": "New Project",
+      "my_projects": "My Projects",
+      "explore": "Explore"
+    },
+    "activity": "Activity",
+    "transactions": "Transactions",
+    "interact": "Interact",
+    "logout": "Logout"
+  },
+  "common": {
+    "search": "Search...",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "save": "Save",
+    "status": "Status",
+    "actions": "Actions"
+  },
+  "dashboard": {
+    "greeting": "Welcome back",
+    "stats": {
+      "total_projects": "Total Projects",
+      "active_contracts": "Active Contracts",
+      "gas_saved": "Gas Saved",
+      "last_activity": "Last Activity",
+      "wallets": "Wallets",
+      "projects": "Projects",
+      "transactions": "Transactions",
+      "network": "Network"
+    },
+    "quick_actions": {
+      "title": "Quick Actions",
+      "new_project": {
+        "title": "New Project",
+        "desc": "Deploy a smart contract"
+      },
+      "explore": {
+        "title": "Explore",
+        "desc": "Browse deployed contracts"
+      },
+      "manage_wallets": {
+        "title": "Manage Wallets",
+        "desc": "Create & fund wallets"
+      },
+      "history": {
+        "title": "Transaction History",
+        "desc": "View past transactions"
+      }
+    }
+  }
+}
+

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   HiOutlineArrowTopRightOnSquare,
@@ -49,6 +50,7 @@ function getProjectName(tx: TransactionWithProject): string {
 }
 
 export default function TransactionHistoryPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [data, setData] = useState<PaginatedResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -83,8 +85,8 @@ export default function TransactionHistoryPage() {
 
   return (
     <PageWrapper
-      title="Transaction History"
-      subtitle="Lịch sử toàn bộ giao dịch trên chuỗi của bạn"
+      title={t('pages.history.title')}
+      subtitle={t('pages.history.subtitle')}
     >
       <div className="tx-history-page">
         {isLoading ? (

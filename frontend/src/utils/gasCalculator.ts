@@ -2,14 +2,15 @@
  * gasCalculator.ts
  * Utility để tính phí Gas ước tính và thực tế.
  *
- * Gas Price: 10 Gwei (BSC Testnet mặc định)
+ * Gas Price: 1 Gwei (BSC Testnet avg)
  * BNB/USD: Fetch live từ backend /api/transactions/bnb-price
  *          Fallback: $600 nếu API lỗi
  */
 
 import type { ethers } from 'ethers';
 
-const GAS_PRICE_GWEI = 10;
+const GAS_PRICE_GWEI = 1;
+
 
 // Cache giá BNB để tránh gọi API quá nhiều lần
 let cachedBnbPrice: number | null = null;

@@ -16,7 +16,8 @@ import { extractSolidityVersion, extractContractName } from '../utils/solidityPa
 import { compileContract } from './sandboxService.js';
 import { createTransaction, getBnbPriceUSD } from './transactionService.js';
 
-const GAS_PRICE_GWEI = 10; // BSC Testnet default
+const GAS_PRICE_GWEI = 1; // BSC Testnet avg gas price
+
 
 // ──────────────────────────────
 // Create Project
@@ -208,7 +209,9 @@ export async function getUserProjects(userId: string) {
 }
 
 export async function getProjectById(projectId: string, userId: string) {
-  const project = await Project.findById(projectId).lean();
+  const project = await Project.findById(projectId)
+    .populate('walletId', 'address')
+    .lean();
   if (!project) return null;
 
   // Allow access if the user is the owner OR if the project is deployed (publicly available for interaction)

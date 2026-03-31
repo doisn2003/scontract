@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, Link } from 'react-router-dom';
 import DeployGasEstimate from '../components/Contract/DeployGasEstimate';
 import {
@@ -19,6 +20,7 @@ import type { ApiResponse, Project, AbiItem } from '../types';
 import './ProjectDetailPage.css';
 
 export default function ProjectDetailPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -126,7 +128,7 @@ export default function ProjectDetailPage() {
   ];
 
   return (
-    <PageWrapper title={project.name} subtitle={project.description || 'Smart contract project'}>
+    <PageWrapper title={project.name} subtitle={project.description || t('pages.projects.detail.subtitle_fallback')}>
       <div className="detail-page">
         {/* Status Pipeline */}
         <div className="pipeline-bar">
@@ -278,17 +280,23 @@ export default function ProjectDetailPage() {
         {/* ABI Viewer */}
         {project.abi && project.abi.length > 0 && (
           <div className="detail-section">
-            <button className="collapsible-header" onClick={() => setShowAbi(!showAbi)}>
-              {showAbi ? <HiOutlineChevronDown /> : <HiOutlineChevronRight />}
-              <span>ABI ({project.abi.length} items)</span>
-              <button
-                className="copy-btn"
-                onClick={(e) => { e.stopPropagation(); copyToClipboard(JSON.stringify(project.abi, null, 2), 'ABI'); }}
-                title="Copy ABI"
-              >
-                <HiOutlineDocumentDuplicate />
-              </button>
+          <div
+            className="collapsible-header"
+            onClick={() => setShowAbi(!showAbi)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowAbi(!showAbi); } }}
+          >
+            {showAbi ? <HiOutlineChevronDown /> : <HiOutlineChevronRight />}
+            <span>ABI ({project.abi.length} items)</span>
+            <button
+              className="copy-btn"
+              onClick={(e) => { e.stopPropagation(); copyToClipboard(JSON.stringify(project.abi, null, 2), 'ABI'); }}
+              title="Copy ABI"
+            >
+              <HiOutlineDocumentDuplicate />
             </button>
+          </div>
             {showAbi && (
               <div className="abi-list">
                 {project.abi.map((item: AbiItem, i: number) => (
@@ -335,10 +343,16 @@ export default function ProjectDetailPage() {
         {/* Source Code Collapsible */}
         {project.soliditySource && (
           <div className="detail-section">
-            <button className="collapsible-header" onClick={() => setShowSource(!showSource)}>
-              {showSource ? <HiOutlineChevronDown /> : <HiOutlineChevronRight />}
-              <span>Source Code</span>
-            </button>
+          <div
+            className="collapsible-header"
+            onClick={() => setShowSource(!showSource)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowSource(!showSource); } }}
+          >
+            {showSource ? <HiOutlineChevronDown /> : <HiOutlineChevronRight />}
+            <span>Source Code</span>
+          </div>
             {showSource && (
               <pre className="source-code-block">{project.soliditySource}</pre>
             )}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, Link } from 'react-router-dom';
 import { ethers } from 'ethers';
 import {
@@ -8,6 +9,10 @@ import {
   HiOutlineExclamationTriangle,
   HiOutlinePlay,
   HiOutlineCodeBracket,
+  HiOutlineEye,
+  HiOutlinePencilSquare,
+  HiOutlineCurrencyDollar,
+  HiOutlineUser,
 } from 'react-icons/hi2';
 import toast from 'react-hot-toast';
 import PageWrapper from '../components/Layout/PageWrapper';
@@ -19,9 +24,12 @@ import api from '../services/api';
 import type { ApiResponse, Project } from '../types';
 import './InteractPage.css';
 
+
+
 type TabKey = 'read' | 'write' | 'payable';
 
 export default function InteractPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const mm = useMetaMask();
   const [project, setProject] = useState<Project | null>(null);
@@ -306,8 +314,8 @@ export default function InteractPage() {
 
   return (
     <PageWrapper
-      title={`Interact: ${project.name}`}
-      subtitle={`${project.contractAddress.slice(0, 10)}...${project.contractAddress.slice(-6)} on ${project.network}`}
+      title={`${t('nav.interact')}: ${project.name}`}
+      subtitle={`${project.contractAddress.slice(0, 10)}...${project.contractAddress.slice(-6)} ${t('pages.dashboard.stats.network')} ${project.network}`}
     >
       <div className="interact-page">
         {/* Network Warning */}
@@ -323,18 +331,44 @@ export default function InteractPage() {
 
         {/* Contract Info Bar */}
         <div className="contract-info-bar">
-          <div className="contract-info-item">
-            <HiOutlineCodeBracket />
-            <span className="mono">{project.contractAddress}</span>
-            <button
-              className="copy-btn"
-              onClick={() => {
-                navigator.clipboard.writeText(project.contractAddress!);
-                toast.success('Address copied!');
-              }}
-            >
-              <HiOutlineDocumentDuplicate />
-            </button>
+          <div className="contract-info-rows">
+            <div className="contract-info-item">
+              <HiOutlineCodeBracket />
+              <span className="info-label">Contract Address:</span>
+              <div className="info-value">
+                <span className="mono">{project.contractAddress}</span>
+                <button
+                  className="copy-btn"
+                  onClick={() => {
+                    navigator.clipboard.writeText(project.contractAddress!);
+                    toast.success('Address copied!');
+                  }}
+                  title="Copy Address"
+                >
+                  <HiOutlineDocumentDuplicate />
+                </button>
+              </div>
+            </div>
+            <div className="contract-info-item">
+              <HiOutlineUser />
+              <span className="info-label">Owner:</span>
+              <div className="info-value">
+                <span className="mono">
+                  {typeof project.walletId === 'object' ? project.walletId.address : project.walletId}
+                </span>
+                <button
+                  className="copy-btn"
+                  onClick={() => {
+                    const addr = typeof project.walletId === 'object' ? project.walletId.address : project.walletId;
+                    navigator.clipboard.writeText(addr);
+                    toast.success('Owner address copied!');
+                  }}
+                  title="Copy Owner"
+                >
+                  <HiOutlineDocumentDuplicate />
+                </button>
+              </div>
+            </div>
           </div>
           <a
             href={`https://testnet.bscscan.com/address/${project.contractAddress}`}
@@ -354,9 +388,15 @@ export default function InteractPage() {
               className={`interact-tab ${activeTab === tab ? 'active' : ''}`}
               onClick={() => setActiveTab(tab)}
             >
-              {tab === 'read' ? '📖 Read' : tab === 'write' ? '✏️ Write' : '💰 Payable'}
+              {tab === 'read' ? (
+                <><HiOutlineEye size={18} /> {t('pages.interact.tabs.read')}</>
+              ) : tab === 'write' ? (
+                <><HiOutlinePencilSquare size={18} /> {t('pages.interact.tabs.write')}</>
+              ) : (
+                <><HiOutlineCurrencyDollar size={18} /> {t('pages.interact.tabs.payable')}</>
+              )}
               <span className="tab-count">{tabCounts[tab]}</span>
-            </button>
+            </button> 
           ))}
         </div>
 

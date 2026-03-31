@@ -12,7 +12,8 @@
 import Transaction from '../models/Transaction.js';
 
 // ── Hằng số Gas ──
-const GAS_PRICE_GWEI = 10;
+const GAS_PRICE_GWEI = 1;
+
 
 /**
  * Lấy giá BNB/USD thời gian thực từ Binance Public API.
