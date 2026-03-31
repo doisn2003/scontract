@@ -14,6 +14,7 @@ import PageWrapper from '../components/Layout/PageWrapper';
 import { useMetaMask } from '../hooks/useMetaMask';
 import { parseABI, getTypeHint, parseInputValue } from '../utils/abiParser';
 import type { ParsedFunction } from '../utils/abiParser';
+import GasEstimate from '../components/Contract/GasEstimate';
 import api from '../services/api';
 import type { ApiResponse, Project } from '../types';
 import './InteractPage.css';
@@ -122,8 +123,22 @@ export default function InteractPage() {
       setResults(s => ({ ...s, [fn.name]: { txHash: tx.hash } }));
 
       // Wait for confirmation
-      await tx.wait();
+      const receipt = await tx.wait();
       toast.success(`Transaction confirmed!`);
+
+      // Record transaction in history (fire-and-forget)
+      try {
+        const gasUsed = receipt?.gasUsed ? Number(receipt.gasUsed) : 0;
+        await api.post('/transactions', {
+          projectId: id,
+          txHash: tx.hash,
+          functionName: fn.name,
+          args: (fn.inputs || []).map(inp => inputValues[fn.name]?.[inp.name] ?? ''),
+          gasUsed,
+        });
+      } catch {
+        // Non-critical — silently skip
+      }
     } catch (err: any) {
       const msg = err.reason || err.message || String(err);
       setResults(s => ({ ...s, [fn.name]: { error: msg } }));
@@ -212,23 +227,38 @@ export default function InteractPage() {
         </div>
       )}
 
-      {/* Action Button */}
-      <button
-        className={`btn ${isWrite ? 'btn-primary' : 'btn-secondary'} fn-btn`}
-        onClick={() => isWrite
-          ? handleWrite(fn, inputValues[fn.name]?.['__value'])
-          : handleRead(fn)
-        }
-        disabled={loadingFn[fn.name]}
-      >
-        {loadingFn[fn.name] ? (
-          <><span className="spinner" style={{ width: 14, height: 14 }} /> Processing...</>
-        ) : isWrite ? (
-          <><HiOutlinePlay /> Execute</>
-        ) : (
-          <><HiOutlineArrowPath /> Query</>
+      {/* Action Button + Gas Estimate */}
+      <div className="fn-action-row">
+        <button
+          className={`btn ${isWrite ? 'btn-primary' : 'btn-secondary'} fn-btn`}
+          onClick={() => isWrite
+            ? handleWrite(fn, inputValues[fn.name]?.['__value'])
+            : handleRead(fn)
+          }
+          disabled={loadingFn[fn.name]}
+        >
+          {loadingFn[fn.name] ? (
+            <><span className="spinner" style={{ width: 14, height: 14 }} /> Processing...</>
+          ) : isWrite ? (
+            <><HiOutlinePlay /> Execute</>
+          ) : (
+            <><HiOutlineArrowPath /> Query</>
+          )}
+        </button>
+        {isWrite && project?.contractAddress && project?.abi && (
+          <GasEstimate
+            contractAddress={project.contractAddress}
+            abi={project.abi as unknown[]}
+            fn={fn}
+            args={(fn.inputs || []).map(inp => {
+              const val = inputValues[fn.name]?.[inp.name] ?? '';
+              try { return parseInputValue(inp.type, val); } catch { return val; }
+            })}
+            payableValue={inputValues[fn.name]?.['__value']}
+            isWrite={isWrite}
+          />
         )}
-      </button>
+      </div>
 
       {/* Result */}
       {results[fn.name] && (

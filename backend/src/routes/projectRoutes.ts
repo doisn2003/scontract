@@ -6,6 +6,7 @@ import {
   deployProject,
   getProjects,
   getProject,
+  estimateDeployGas,
 } from '../controllers/projectController.js';
 
 const router = Router();
@@ -19,7 +20,8 @@ router.get('/', getProjects);              // GET  /api/projects
 router.get('/:id', getProject);            // GET  /api/projects/:id
 
 // Pipeline
-router.post('/:id/compile', compileProject); // POST /api/projects/:id/compile
-router.post('/:id/deploy', deployProject);   // POST /api/projects/:id/deploy
+router.post('/:id/compile', compileProject);                 // POST /api/projects/:id/compile
+router.post('/:id/deploy', deployProject);                   // POST /api/projects/:id/deploy
+router.get('/:id/estimate-deploy', estimateDeployGas);       // GET  /api/projects/:id/estimate-deploy
 
 export default router;

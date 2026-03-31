@@ -106,6 +106,10 @@ export function useMetaMask() {
 
     setState(s => ({ ...s, isConnecting: true, error: null }));
     try {
+      await ethereum.request({
+        method: 'wallet_requestPermissions',
+        params: [{ eth_accounts: {} }],
+      });
       const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
       const chainIdHex = await ethereum.request({ method: 'eth_chainId' });
       const chainId = parseInt(chainIdHex, 16);

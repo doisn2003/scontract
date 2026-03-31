@@ -161,3 +161,31 @@ export const getExploreProjects = async (_req: Request, res: Response): Promise<
     sendError(res, message, 500);
   }
 };
+
+/**
+ * GET /api/projects/:id/estimate-deploy
+ * Dry-run gas estimation for deploying a compiled contract.
+ * Returns { gasLimit, gasBNB, gasUSD, bnbPrice, deployerAddress }
+ * Does NOT broadcast any transaction.
+ */
+export const estimateDeployGas = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?.id;
+    if (!userId) { sendError(res, 'Unauthorized', 401); return; }
+
+    const projectId = req.params.id as string;
+    if (!projectId) { sendError(res, 'Project ID is required', 400); return; }
+
+    const { constructorArgs = [] } = req.query as { constructorArgs?: unknown[] };
+
+    const result = await projectService.estimateDeployGas(projectId, userId, constructorArgs);
+    sendSuccess(res, 'Gas estimate calculated', result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to estimate gas';
+    const statusCode = message.includes('not found') ? 404
+      : message.includes('Must compile') ? 400
+      : 500;
+    sendError(res, message, statusCode);
+  }
+};

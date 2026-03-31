@@ -145,6 +145,19 @@
   margin-top: var(--space-2);
 }
 
+.fn-action-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.fn-action-row .fn-btn {
+  margin-top: 0;
+}
+
+
 /* Results */
 .fn-result {
   margin-top: var(--space-3);

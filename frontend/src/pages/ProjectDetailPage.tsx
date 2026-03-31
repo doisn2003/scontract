@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import DeployGasEstimate from '../components/Contract/DeployGasEstimate';
 import {
   HiOutlineCodeBracket,
   HiOutlineRocketLaunch,
@@ -194,6 +195,11 @@ export default function ProjectDetailPage() {
               <HiOutlineArrowTopRightOnSquare /> View on BscScan
             </a>
           </div>
+        )}
+
+        {/* Gas Estimate before Deploy */}
+        {project.status === 'compiled' && id && (
+          <DeployGasEstimate projectId={id} />
         )}
 
         {/* Action Buttons */}
