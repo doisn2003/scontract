@@ -21,10 +21,12 @@ import PageWrapper from '../components/Layout/PageWrapper';
 import api from '../services/api';
 import type { ApiResponse, Project, AbiItem, AbiInput } from '../types';
 import { ethers } from 'ethers';
+import { useAuth } from '../context/AuthContext';
 import './ProjectDetailPage.css';
 
 export default function ProjectDetailPage() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const { id } = useParams<{ id: string }>();
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -92,6 +94,7 @@ export default function ProjectDetailPage() {
     }
   }, [project?.abi, project?.walletId]);
 
+  const isOwner = user?._id === project?.userId;
   const isSourceDirty = project ? sourceCode !== project.soliditySource : false;
 
   // ─── Save Updates ───
@@ -333,9 +336,12 @@ export default function ProjectDetailPage() {
       ) : (
         <div className="subtitle-container">
           <span>{project!.description || t('pages.projects.detail.subtitle_fallback')}</span>
-          <button className="edit-icon-btn" onClick={() => setIsEditingMetadata(true)} title="Edit Title & Description">
-            <HiOutlinePencilSquare />
-          </button>
+          {isOwner && (
+            <button className="edit-icon-btn" onClick={() => setIsEditingMetadata(true)} title="Edit Title & Description">
+              <HiOutlinePencilSquare />
+            </button>
+          )}
+          {!isOwner && <span className="badge badge-info status-readonly">Read Only</span>}
         </div>
       )}
     >
@@ -410,7 +416,7 @@ export default function ProjectDetailPage() {
         )}
 
         {/* Constructor Form */}
-        {project!.status === 'compiled' && constructorParams.length > 0 && (
+        {isOwner && project!.status === 'compiled' && constructorParams.length > 0 && (
           <div className="constructor-form-container">
             <div className="constructor-header">
               <HiOutlineExclamationTriangle className="icon-warning" />
@@ -450,13 +456,13 @@ export default function ProjectDetailPage() {
         )}
 
         {/* Gas Estimate before Deploy */}
-        {project!.status === 'compiled' && id && (
+        {isOwner && project!.status === 'compiled' && id && (
           <DeployGasEstimate projectId={id} />
         )}
 
         {/* Action Buttons */}
         <div className="detail-actions">
-          {project!.status === 'created' && (
+          {isOwner && project!.status === 'created' && (
             <button
               className="btn btn-primary btn-lg"
               onClick={handleCompile}
@@ -470,7 +476,7 @@ export default function ProjectDetailPage() {
             </button>
           )}
 
-          {project!.status === 'compiled' && (
+          {isOwner && project!.status === 'compiled' && (
             <>
               <button
                 className="btn btn-secondary"
@@ -501,7 +507,7 @@ export default function ProjectDetailPage() {
           )}
 
           {/* Test button — available after compilation */}
-          {(project!.status === 'compiled' || project!.status === 'deployed') && (
+          {isOwner && (project!.status === 'compiled' || project!.status === 'deployed') && (
             <Link to={`/projects/${project!._id}/test`} className="btn btn-secondary">
               🧪 Run Tests
             </Link>
@@ -612,12 +618,12 @@ export default function ProjectDetailPage() {
                   className="source-editor-textarea"
                   value={sourceCode}
                   onChange={(e) => setSourceCode(e.target.value)}
-                  readOnly={project!.status === 'deployed'}
+                  readOnly={!isOwner || project!.status === 'deployed'}
                   spellCheck={false}
                 />
-                {project!.status === 'deployed' && (
+                {(project!.status === 'deployed' || !isOwner) && (
                   <div className="source-lock-notice">
-                    <HiOutlineExclamationTriangle /> Source code is locked after deployment
+                    <HiOutlineExclamationTriangle /> {!isOwner ? 'Source code is read-only for public view' : 'Source code is locked after deployment'}
                   </div>
                 )}
               </div>

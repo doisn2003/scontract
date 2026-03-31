@@ -441,3 +441,7 @@ img {
   font-family: var(--font-mono);
   font-size: var(--font-size-sm);
 }
+
+.cursor-pointer {
+  cursor: pointer;
+}
