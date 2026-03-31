@@ -19,7 +19,8 @@ import {
 import toast from 'react-hot-toast';
 import PageWrapper from '../components/Layout/PageWrapper';
 import api from '../services/api';
-import type { ApiResponse, Project, AbiItem } from '../types';
+import type { ApiResponse, Project, AbiItem, AbiInput } from '../types';
+import { ethers } from 'ethers';
 import './ProjectDetailPage.css';
 
 export default function ProjectDetailPage() {
@@ -33,6 +34,11 @@ export default function ProjectDetailPage() {
   const [deployError, setDeployError] = useState('');
   const [showSource, setShowSource] = useState(false);
   const [showAbi, setShowAbi] = useState(false);
+  const [compileErrorDetails, setCompileErrorDetails] = useState('');
+  const [deployErrorDetails, setDeployErrorDetails] = useState('');
+  const [constructorParams, setConstructorParams] = useState<AbiInput[]>([]);
+  const [constructorArgs, setConstructorArgs] = useState<Record<string, string>>({});
+  const [showArgErrors, setShowArgErrors] = useState(false);
 
   // Editing states
   const [isEditingMetadata, setIsEditingMetadata] = useState(false);
@@ -60,6 +66,31 @@ export default function ProjectDetailPage() {
   }, [id]);
 
   useEffect(() => { fetchProject(); }, [fetchProject]);
+
+  // Extract constructor params when project/ABI changes
+  useEffect(() => {
+    if (project?.abi) {
+      const constructor = project.abi.find((item: AbiItem) => item.type === 'constructor');
+      if (constructor?.inputs) {
+        setConstructorParams(constructor.inputs);
+        // Pre-fill initialOwner if not already set
+        const defaultValues: Record<string, string> = { ...constructorArgs };
+        constructor.inputs.forEach((input: AbiInput) => {
+          if (!defaultValues[input.name]) {
+            const isOwner = input.name.toLowerCase().includes('owner');
+            if (isOwner && typeof project.walletId === 'object' && project.walletId.address) {
+              defaultValues[input.name] = project.walletId.address;
+            } else {
+              defaultValues[input.name] = '';
+            }
+          }
+        });
+        setConstructorArgs(defaultValues);
+      } else {
+        setConstructorParams([]);
+      }
+    }
+  }, [project?.abi, project?.walletId]);
 
   const isSourceDirty = project ? sourceCode !== project.soliditySource : false;
 
@@ -102,16 +133,19 @@ export default function ProjectDetailPage() {
 
     setIsCompiling(true);
     setCompileError('');
+    setCompileErrorDetails('');
     try {
       const { data } = await api.post<ApiResponse<Project>>(`/projects/${id}/compile`);
       if (data.success && data.data) {
         toast.success('Compilation successful!');
-        // Refresh project to get ABI/bytecode
         fetchProject();
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Compilation failed';
+      const resp = err?.response?.data;
+      const msg = resp?.message || 'Compilation failed';
+      const details = resp?.error || '';
       setCompileError(msg);
+      setCompileErrorDetails(details);
       toast.error(msg);
     } finally {
       setIsCompiling(false);
@@ -123,17 +157,33 @@ export default function ProjectDetailPage() {
     if (!id) return;
     setIsDeploying(true);
     setDeployError('');
+    setDeployErrorDetails('');
+
+    // Validate constructor args
+    const missing = constructorParams.some(p => !constructorArgs[p.name]);
+    if (missing) {
+      setShowArgErrors(true);
+      setIsDeploying(false);
+      toast.error('Please fill all constructor parameters');
+      return;
+    }
+
+    const argsArray = constructorParams.map(p => constructorArgs[p.name]);
+
     try {
       const { data } = await api.post<ApiResponse<any>>(`/projects/${id}/deploy`, {
-        constructorArgs: [],
+        constructorArgs: argsArray,
       });
       if (data.success && data.data) {
         toast.success(`Deployed at ${data.data.contractAddress}`);
         fetchProject();
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Deployment failed';
+      const resp = err?.response?.data;
+      const msg = resp?.message || 'Deployment failed';
+      const details = resp?.error || '';
       setDeployError(msg);
+      setDeployErrorDetails(details);
       toast.error(msg);
     } finally {
       setIsDeploying(false);
@@ -143,6 +193,79 @@ export default function ProjectDetailPage() {
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copied!`);
+  };
+
+  const LogViewer = ({ title, log }: { title: string, log: string }) => {
+    if (!log) return null;
+    return (
+      <div className="log-viewer-container">
+        <div className="log-viewer-header">
+          <button 
+            className="btn-copy-log" 
+            onClick={() => copyToClipboard(log, 'Full Log')}
+            title="Copy full log"
+          >
+            <HiOutlineDocumentDuplicate /> Copy Log
+          </button>
+          <span className="log-viewer-title">{title}</span>
+        </div>
+        <div className="log-viewer-body">
+          <pre>{log}</pre>
+        </div>
+      </div>
+    );
+  };
+
+  const handleArgChange = (name: string, value: string) => {
+    setConstructorArgs(prev => ({ ...prev, [name]: value }));
+    setShowArgErrors(false);
+  };
+
+  const handleApplyToSource = async () => {
+    let newSource = sourceCode;
+    let replacedCount = 0;
+
+    constructorParams.forEach(p => {
+      let rawVal = (constructorArgs[p.name] || '').toString().trim();
+      if (!rawVal) return;
+
+      // 1. Sanitize & Checksum (Frontend Layer)
+      let val = rawVal;
+      if (p.type.toLowerCase().includes('address') && ethers.isAddress(rawVal)) {
+        val = ethers.getAddress(rawVal); // Force Checksum (EIP-55)
+      } else if (p.type.toLowerCase().includes('string')) {
+        val = rawVal.replace(/^["']|["']$/g, ''); // Strip user-added quotes
+      }
+
+      const pName = p.name;
+      const formattedVal = p.type.toLowerCase().includes('string') ? `"${val}"` : val;
+
+      // Universal Search & Replace Tactics (V3 - Resilience Focused)
+      const patterns = [
+        // A. Assignment OR Usage in parenthesis (Handle Parent(arg) or Type(arg))
+        new RegExp(`(\\s*=\\s*(?:[a-zA-Z0-9_]+\\s*\\(\\s*)?|\\(\\s*(?:[^()]*?,\\s*)?)${pName}(\\s*(?:,\\s*[^()]*)?[),;])`, 'gi'),
+
+        // B. Standalone definition
+        new RegExp(`((?:address|string|uint256|uint|bool)\\s+(?:public|private|internal)?\\s*(?:immutable|constant|)?\\s*${pName.replace(/^_/, '')}\\s*=\\s*)(?:"[^"]*"|'[^']*'|address\\(0\\)|0x0[0-9a-fA-F]{39}|[0-9]+|false|true|0);?`, 'gi'),
+      ];
+
+      patterns.forEach(regex => {
+        const originalSource = newSource;
+        newSource = newSource.replace(regex, `$1${formattedVal}$2`);
+        if (newSource !== originalSource) {
+          replacedCount++;
+        }
+      });
+    });
+
+    // Layer 2 Defense: Proceed anyway even if frontend count is 0. 
+    // The Backend 'repairAddressChecksums' will handle any missing checksums.
+    setSourceCode(newSource);
+    const success = await handleUpdate({ soliditySource: newSource });
+    if (success) {
+      toast.success(replacedCount > 0 ? 'Dependencies Injected & Re-compiling...' : 'Source Optimized & Re-compiling...');
+      handleCompile();
+    }
   };
 
   if (isLoading) {
@@ -286,6 +409,46 @@ export default function ProjectDetailPage() {
           </div>
         )}
 
+        {/* Constructor Form */}
+        {project!.status === 'compiled' && constructorParams.length > 0 && (
+          <div className="constructor-form-container">
+            <div className="constructor-header">
+              <HiOutlineExclamationTriangle className="icon-warning" />
+              <div>
+                <h4>Constructor Arguments Required</h4>
+                <p>Please provide the dependencies below before deploying.</p>
+              </div>
+              <button 
+                className="btn-sm btn-recompile-source" 
+                onClick={handleApplyToSource}
+                title="Embed current values into Solidity source and re-compile"
+              >
+                <HiOutlineCpuChip /> Re-compile
+              </button>
+            </div>
+            <div className="constructor-grid">
+              {constructorParams.map((p) => {
+                const isUri = p.name.toLowerCase().includes('uri');
+                const isAddress = p.type === 'address';
+                return (
+                  <div key={p.name} className="arg-field">
+                    <label>
+                      {p.name} <span>({p.type})</span>
+                    </label>
+                    <input
+                      type="text"
+                      className={`form-input ${showArgErrors && !constructorArgs[p.name] ? 'blink-error' : ''}`}
+                      placeholder={isUri ? 'e.g., ipfs://.../ or https://...' : isAddress ? '0x...' : `Enter ${p.type}...`}
+                      value={constructorArgs[p.name] || ''}
+                      onChange={(e) => handleArgChange(p.name, e.target.value)}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Gas Estimate before Deploy */}
         {project!.status === 'compiled' && id && (
           <DeployGasEstimate projectId={id} />
@@ -349,18 +512,20 @@ export default function ProjectDetailPage() {
         {compileError && (
           <div className="detail-error">
             <HiOutlineExclamationTriangle />
-            <div>
+            <div style={{ flex: 1 }}>
               <strong>Compilation Error</strong>
-              <pre>{compileError}</pre>
+              <pre className="error-summary">{compileError}</pre>
+              <LogViewer title="Compilation Log" log={compileErrorDetails} />
             </div>
           </div>
         )}
         {deployError && (
           <div className="detail-error">
             <HiOutlineExclamationTriangle />
-            <div>
+            <div style={{ flex: 1 }}>
               <strong>Deploy Error</strong>
-              <pre>{deployError}</pre>
+              <pre className="error-summary">{deployError}</pre>
+              <LogViewer title="Deployment Log" log={deployErrorDetails} />
             </div>
           </div>
         )}
