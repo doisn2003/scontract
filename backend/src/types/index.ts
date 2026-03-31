@@ -61,6 +61,7 @@ export interface IProject extends Document {
   userId: Types.ObjectId;
   walletId: Types.ObjectId;
   name: string;
+  contractName: string;
   description: string;
   soliditySource: string;
   abi: Record<string, unknown>[];

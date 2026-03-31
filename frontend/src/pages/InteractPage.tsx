@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, Link } from 'react-router-dom';
 import { ethers } from 'ethers';
 import {
@@ -8,19 +9,27 @@ import {
   HiOutlineExclamationTriangle,
   HiOutlinePlay,
   HiOutlineCodeBracket,
+  HiOutlineEye,
+  HiOutlinePencilSquare,
+  HiOutlineCurrencyDollar,
+  HiOutlineUser,
 } from 'react-icons/hi2';
 import toast from 'react-hot-toast';
 import PageWrapper from '../components/Layout/PageWrapper';
 import { useMetaMask } from '../hooks/useMetaMask';
 import { parseABI, getTypeHint, parseInputValue } from '../utils/abiParser';
 import type { ParsedFunction } from '../utils/abiParser';
+import GasEstimate from '../components/Contract/GasEstimate';
 import api from '../services/api';
 import type { ApiResponse, Project } from '../types';
 import './InteractPage.css';
 
+
+
 type TabKey = 'read' | 'write' | 'payable';
 
 export default function InteractPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const mm = useMetaMask();
   const [project, setProject] = useState<Project | null>(null);
@@ -122,8 +131,22 @@ export default function InteractPage() {
       setResults(s => ({ ...s, [fn.name]: { txHash: tx.hash } }));
 
       // Wait for confirmation
-      await tx.wait();
+      const receipt = await tx.wait();
       toast.success(`Transaction confirmed!`);
+
+      // Record transaction in history (fire-and-forget)
+      try {
+        const gasUsed = receipt?.gasUsed ? Number(receipt.gasUsed) : 0;
+        await api.post('/transactions', {
+          projectId: id,
+          txHash: tx.hash,
+          functionName: fn.name,
+          args: (fn.inputs || []).map(inp => inputValues[fn.name]?.[inp.name] ?? ''),
+          gasUsed,
+        });
+      } catch {
+        // Non-critical — silently skip
+      }
     } catch (err: any) {
       const msg = err.reason || err.message || String(err);
       setResults(s => ({ ...s, [fn.name]: { error: msg } }));
@@ -212,23 +235,38 @@ export default function InteractPage() {
         </div>
       )}
 
-      {/* Action Button */}
-      <button
-        className={`btn ${isWrite ? 'btn-primary' : 'btn-secondary'} fn-btn`}
-        onClick={() => isWrite
-          ? handleWrite(fn, inputValues[fn.name]?.['__value'])
-          : handleRead(fn)
-        }
-        disabled={loadingFn[fn.name]}
-      >
-        {loadingFn[fn.name] ? (
-          <><span className="spinner" style={{ width: 14, height: 14 }} /> Processing...</>
-        ) : isWrite ? (
-          <><HiOutlinePlay /> Execute</>
-        ) : (
-          <><HiOutlineArrowPath /> Query</>
+      {/* Action Button + Gas Estimate */}
+      <div className="fn-action-row">
+        <button
+          className={`btn ${isWrite ? 'btn-primary' : 'btn-secondary'} fn-btn`}
+          onClick={() => isWrite
+            ? handleWrite(fn, inputValues[fn.name]?.['__value'])
+            : handleRead(fn)
+          }
+          disabled={loadingFn[fn.name]}
+        >
+          {loadingFn[fn.name] ? (
+            <><span className="spinner" style={{ width: 14, height: 14 }} /> Processing...</>
+          ) : isWrite ? (
+            <><HiOutlinePlay /> Execute</>
+          ) : (
+            <><HiOutlineArrowPath /> Query</>
+          )}
+        </button>
+        {isWrite && project?.contractAddress && project?.abi && (
+          <GasEstimate
+            contractAddress={project.contractAddress}
+            abi={project.abi as unknown[]}
+            fn={fn}
+            args={(fn.inputs || []).map(inp => {
+              const val = inputValues[fn.name]?.[inp.name] ?? '';
+              try { return parseInputValue(inp.type, val); } catch { return val; }
+            })}
+            payableValue={inputValues[fn.name]?.['__value']}
+            isWrite={isWrite}
+          />
         )}
-      </button>
+      </div>
 
       {/* Result */}
       {results[fn.name] && (
@@ -276,8 +314,8 @@ export default function InteractPage() {
 
   return (
     <PageWrapper
-      title={`Interact: ${project.name}`}
-      subtitle={`${project.contractAddress.slice(0, 10)}...${project.contractAddress.slice(-6)} on ${project.network}`}
+      title={`${t('nav.interact')}: ${project.name}`}
+      subtitle={`${project.contractAddress.slice(0, 10)}...${project.contractAddress.slice(-6)} ${t('pages.dashboard.stats.network')} ${project.network}`}
     >
       <div className="interact-page">
         {/* Network Warning */}
@@ -293,18 +331,44 @@ export default function InteractPage() {
 
         {/* Contract Info Bar */}
         <div className="contract-info-bar">
-          <div className="contract-info-item">
-            <HiOutlineCodeBracket />
-            <span className="mono">{project.contractAddress}</span>
-            <button
-              className="copy-btn"
-              onClick={() => {
-                navigator.clipboard.writeText(project.contractAddress!);
-                toast.success('Address copied!');
-              }}
-            >
-              <HiOutlineDocumentDuplicate />
-            </button>
+          <div className="contract-info-rows">
+            <div className="contract-info-item">
+              <HiOutlineCodeBracket />
+              <span className="info-label">Contract Address:</span>
+              <div className="info-value">
+                <span className="mono">{project.contractAddress}</span>
+                <button
+                  className="copy-btn"
+                  onClick={() => {
+                    navigator.clipboard.writeText(project.contractAddress!);
+                    toast.success('Address copied!');
+                  }}
+                  title="Copy Address"
+                >
+                  <HiOutlineDocumentDuplicate />
+                </button>
+              </div>
+            </div>
+            <div className="contract-info-item">
+              <HiOutlineUser />
+              <span className="info-label">Owner:</span>
+              <div className="info-value">
+                <span className="mono">
+                  {typeof project.walletId === 'object' ? project.walletId.address : project.walletId}
+                </span>
+                <button
+                  className="copy-btn"
+                  onClick={() => {
+                    const addr = typeof project.walletId === 'object' ? project.walletId.address : project.walletId;
+                    navigator.clipboard.writeText(addr);
+                    toast.success('Owner address copied!');
+                  }}
+                  title="Copy Owner"
+                >
+                  <HiOutlineDocumentDuplicate />
+                </button>
+              </div>
+            </div>
           </div>
           <a
             href={`https://testnet.bscscan.com/address/${project.contractAddress}`}
@@ -324,9 +388,15 @@ export default function InteractPage() {
               className={`interact-tab ${activeTab === tab ? 'active' : ''}`}
               onClick={() => setActiveTab(tab)}
             >
-              {tab === 'read' ? '📖 Read' : tab === 'write' ? '✏️ Write' : '💰 Payable'}
+              {tab === 'read' ? (
+                <><HiOutlineEye size={18} /> {t('pages.interact.tabs.read')}</>
+              ) : tab === 'write' ? (
+                <><HiOutlinePencilSquare size={18} /> {t('pages.interact.tabs.write')}</>
+              ) : (
+                <><HiOutlineCurrencyDollar size={18} /> {t('pages.interact.tabs.payable')}</>
+              )}
               <span className="tab-count">{tabCounts[tab]}</span>
-            </button>
+            </button> 
           ))}
         </div>
 

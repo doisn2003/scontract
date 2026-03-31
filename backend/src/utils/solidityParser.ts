@@ -61,3 +61,38 @@ export function extractContractName(source: string): string {
   console.log(`[solidityParser] Extracted contract name: ${name}`);
   return name;
 }
+
+import { ethers } from 'ethers';
+
+/**
+ * Scan Solidity source code for address literals and ensure they are checksummed.
+ * This fixes the 'invalid checksum' compiler error automatically.
+ */
+export function repairAddressChecksums(source: string): string {
+  // Regex to find things that look like Ethereum addresses: 0x followed by 40 hex chars
+  // We use word boundaries to avoid matching longer strings or different formats
+  const addressRegex = /\b0x[a-fA-F0-9]{40}\b/g;
+  
+  let repairedSource = source;
+  const matches = source.match(addressRegex);
+  
+  if (matches) {
+    const uniqueMatches = Array.from(new Set(matches));
+    uniqueMatches.forEach(addr => {
+      try {
+        if (ethers.isAddress(addr)) {
+          const checksummed = ethers.getAddress(addr);
+          if (addr !== checksummed) {
+            console.log(`[solidityParser] Auto-repairing checksum: ${addr} -> ${checksummed}`);
+            // Use global replace to fix all occurrences of this specific address
+            repairedSource = repairedSource.split(addr).join(checksummed);
+          }
+        }
+      } catch (e) {
+        // Not a valid address or encoding issue, skip
+      }
+    });
+  }
+  
+  return repairedSource;
+}

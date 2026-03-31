@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, Link } from 'react-router-dom';
 import {
   HiOutlinePlay,
@@ -38,6 +39,7 @@ interface TestResult {
 }
 
 export default function TestPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,7 +57,7 @@ export default function TestPage() {
       if (data.success && data.data) {
         setProject(data.data);
         // Auto-fill template
-        const contractName = data.data.name || 'MyContract';
+        const contractName = data.data.contractName || data.data.name || 'MyContract';
         setTestCode(getViemTemplate(contractName));
       }
     } catch {
@@ -70,7 +72,7 @@ export default function TestPage() {
   // Library switch → update template
   const handleLibraryChange = (lib: TestLibrary) => {
     setLibrary(lib);
-    const contractName = project?.name || 'MyContract';
+    const contractName = project?.contractName || project?.name || 'MyContract';
     const template = lib === 'viem'
       ? getViemTemplate(contractName)
       : getEthersTemplate(contractName);
@@ -140,8 +142,8 @@ export default function TestPage() {
 
   return (
     <PageWrapper
-      title={`Test: ${project.name}`}
-      subtitle="Write and run unit tests in a Docker sandbox (Hardhat Network)"
+      title={`${t('pages.test.title')}: ${project.name}`}
+      subtitle={t('pages.test.subtitle')}
     >
       <div className="test-page">
         {/* Top Bar */}
@@ -161,7 +163,7 @@ export default function TestPage() {
             <button
               className="btn btn-ghost btn-sm"
               onClick={() => {
-                const contractName = project.name || 'MyContract';
+                const contractName = project.contractName || project.name || 'MyContract';
                 setTestCode(library === 'viem' ? getViemTemplate(contractName) : getEthersTemplate(contractName));
                 toast.success('Template reset');
               }}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   HiOutlineFolder,
@@ -6,6 +7,7 @@ import {
   HiOutlineCodeBracket,
   HiOutlineRocketLaunch,
   HiOutlineCheckCircle,
+  HiOutlineTrash,
 } from 'react-icons/hi2';
 import toast from 'react-hot-toast';
 import PageWrapper from '../components/Layout/PageWrapper';
@@ -20,6 +22,7 @@ const STATUS_CONFIG: Record<ProjectStatus, { label: string; className: string; i
 };
 
 export default function ProjectListPage() {
+  const { t } = useTranslation();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
@@ -38,10 +41,25 @@ export default function ProjectListPage() {
     }
   }, []);
 
+  const handleDeleteProject = async (e: React.MouseEvent, projectId: string) => {
+    e.stopPropagation(); // Don't navigate to project detail
+    if (!window.confirm('Are you sure you want to delete this project? This action cannot be undone.')) return;
+
+    try {
+      const { data } = await api.delete<ApiResponse>(`/projects/${projectId}`);
+      if (data.success) {
+        toast.success('Project deleted');
+        setProjects(projects.filter(p => p._id !== projectId));
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to delete project');
+    }
+  };
+
   useEffect(() => { fetchProjects(); }, [fetchProjects]);
 
   return (
-    <PageWrapper title="My Projects" subtitle="View and manage your smart contract projects">
+    <PageWrapper title={t('pages.projects.list.title')} subtitle={t('pages.projects.list.subtitle')}>
       <div className="projects-page">
         {/* Header */}
         <div className="projects-header">
@@ -87,9 +105,18 @@ export default function ProjectListPage() {
                 >
                   <div className="project-card-top">
                     <h3 className="project-card-name">{project.name}</h3>
-                    <span className={`badge ${statusCfg.className}`}>
-                      {statusCfg.icon} {statusCfg.label}
-                    </span>
+                    <div className="card-actions">
+                      <span className={`badge ${statusCfg.className}`}>
+                        {statusCfg.icon} {statusCfg.label}
+                      </span>
+                      <button
+                        className="btn-delete"
+                        onClick={(e) => handleDeleteProject(e, project._id)}
+                        title="Delete Project"
+                      >
+                        <HiOutlineTrash />
+                      </button>
+                    </div>
                   </div>
 
                   {project.description && (

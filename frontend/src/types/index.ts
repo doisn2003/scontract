@@ -55,8 +55,9 @@ export type ProjectStatus = 'created' | 'compiled' | 'deployed';
 export interface Project {
   _id: string;
   userId: string;
-  walletId: string;
+  walletId: string | { _id: string; address: string };
   name: string;
+  contractName: string;
   description: string;
   soliditySource: string;
   abi: AbiItem[] | null;

@@ -66,13 +66,11 @@ export const compileProject = async (req: Request, res: Response): Promise<void>
     if (!projectId) { sendError(res, 'Project ID is required', 400); return; }
 
     const result = await projectService.compileProject(projectId, userId);
-
     sendSuccess(res, 'Compilation successful', result);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Compilation failed';
-    // Compilation errors are client-side issues (bad Solidity code)
+  } catch (error: any) {
+    const message = error.message || 'Compilation failed';
     const statusCode = message.includes('not found') ? 404 : 400;
-    sendError(res, message, statusCode);
+    sendError(res, message, statusCode, error.details);
   }
 };
 
@@ -161,3 +159,83 @@ export const getExploreProjects = async (_req: Request, res: Response): Promise<
     sendError(res, message, 500);
   }
 };
+
+/**
+ * GET /api/projects/:id/estimate-deploy
+ * Dry-run gas estimation for deploying a compiled contract.
+ * Returns { gasLimit, gasBNB, gasUSD, bnbPrice, deployerAddress }
+ * Does NOT broadcast any transaction.
+ */
+export const estimateDeployGas = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?.id;
+    if (!userId) { sendError(res, 'Unauthorized', 401); return; }
+
+    const projectId = req.params.id as string;
+    if (!projectId) { sendError(res, 'Project ID is required', 400); return; }
+
+    const { constructorArgs = [] } = req.query as { constructorArgs?: unknown[] };
+
+    const result = await projectService.estimateDeployGas(projectId, userId, constructorArgs);
+    sendSuccess(res, 'Gas estimate calculated', result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to estimate gas';
+    const statusCode = message.includes('not found') ? 404
+      : message.includes('Must compile') ? 400
+      : 500;
+    sendError(res, message, statusCode);
+  }
+};
+
+/**
+ * DELETE /api/projects/:id
+ * Delete a project (must be owner).
+ */
+export const deleteProject = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?.id;
+    if (!userId) { sendError(res, 'Unauthorized', 401); return; }
+
+    const projectId = req.params.id as string;
+    if (!projectId) { sendError(res, 'Project ID is required', 400); return; }
+
+    await projectService.deleteProject(projectId, userId);
+
+    sendSuccess(res, 'Project deleted successfully');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to delete project';
+    const statusCode = message.includes('not authorized') ? 403
+      : message.includes('not found') ? 404
+      : 500;
+    sendError(res, message, statusCode);
+  }
+};
+
+/**
+ * PATCH /api/projects/:id
+ * Update project details (name, description, soliditySource).
+ */
+export const updateProject = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?.id;
+    if (!userId) { sendError(res, 'Unauthorized', 401); return; }
+
+    const projectId = req.params.id as string;
+    const updates = req.body as { name?: string; description?: string; soliditySource?: string };
+
+    const project = await projectService.updateProject(projectId, userId, updates);
+
+    sendSuccess(res, 'Project updated successfully', project);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to update project';
+    const statusCode = message.includes('not found') ? 404
+      : message.includes('Cannot edit source') ? 400
+      : 500;
+    sendError(res, message, statusCode);
+  }
+};
+
+

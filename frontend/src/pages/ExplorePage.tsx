@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
   HiOutlineGlobeAlt,
   HiOutlineRocketLaunch,
-  HiOutlineArrowTopRightOnSquare,
 } from 'react-icons/hi2';
 import toast from 'react-hot-toast';
 import PageWrapper from '../components/Layout/PageWrapper';
 import api from '../services/api';
 import type { ApiResponse } from '../types';
 import './ExplorePage.css';
+
+import ProjectCard from '../components/Explore/ProjectCard';
 
 interface ExploreProject {
   _id: string;
@@ -23,6 +25,7 @@ interface ExploreProject {
 }
 
 export default function ExplorePage() {
+  const { t } = useTranslation();
   const [projects, setProjects] = useState<ExploreProject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -43,15 +46,20 @@ export default function ExplorePage() {
   }, []);
 
   return (
-    <PageWrapper title="Explore" subtitle="Browse smart contracts deployed on BSC Testnet">
+    <PageWrapper title={t('pages.explore.title')} subtitle={t('pages.explore.subtitle')}>
       <div className="explore-page">
         {isLoading ? (
           <div className="explore-grid">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="explore-card">
-                <div className="skeleton" style={{ height: 24, width: '60%', marginBottom: 12 }} />
-                <div className="skeleton" style={{ height: 16, width: '100%', marginBottom: 16 }} />
-                <div className="skeleton" style={{ height: 32 }} />
+              <div key={i} className="explore-card" style={{ height: 180 }}>
+                <div className="explore-card-header">
+                  <div className="skeleton" style={{ height: 20, width: '60%' }} />
+                </div>
+                <div className="skeleton" style={{ height: 24, marginBottom: 16 }} />
+                <div className="skeleton" style={{ height: 28, width: '70%', marginBottom: 16 }} />
+                <div className="explore-card-footer">
+                  <div className="skeleton" style={{ height: 16, width: '40%' }} />
+                </div>
               </div>
             ))}
           </div>
@@ -67,42 +75,7 @@ export default function ExplorePage() {
         ) : (
           <div className="explore-grid">
             {projects.map(p => (
-              <div key={p._id} className="explore-card">
-                <div className="explore-card-header">
-                  <h3>{p.name}</h3>
-                  <span className="badge badge-success">Deployed</span>
-                </div>
-
-                {p.description && (
-                  <p className="explore-card-desc">{p.description}</p>
-                )}
-
-                <div className="explore-card-address mono">
-                  <HiOutlineRocketLaunch />
-                  {p.contractAddress.slice(0, 14)}...{p.contractAddress.slice(-8)}
-                </div>
-
-                <div className="explore-card-footer">
-                  <span className="explore-card-network">{p.network}</span>
-                  <div className="explore-card-links">
-                    <a
-                      href={`https://testnet.bscscan.com/address/${p.contractAddress}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn btn-ghost btn-sm"
-                      title="View on BscScan"
-                    >
-                      <HiOutlineArrowTopRightOnSquare /> BscScan
-                    </a>
-                    <Link
-                      to={`/projects/${p._id}/interact`}
-                      className="btn btn-secondary btn-sm"
-                    >
-                      Interact
-                    </Link>
-                  </div>
-                </div>
-              </div>
+              <ProjectCard key={p._id} project={p} />
             ))}
           </div>
         )}
@@ -110,3 +83,4 @@ export default function ExplorePage() {
     </PageWrapper>
   );
 }
+

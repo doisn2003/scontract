@@ -28,7 +28,7 @@ const execAsync = promisify(exec);
 
 // --- Constants ---
 const DOCKER_IMAGE = 'scontract-hardhat-base';
-const DOCKER_TIMEOUT_MS = 120_000; // 2 minutes per container run
+const DOCKER_TIMEOUT_MS = 300_000; // 5 minutes per container run
 const RESULT_FILE = 'result.json';
 const TEST_RESULT_FILE = 'test-result.json';
 
@@ -124,8 +124,8 @@ function buildDockerCommand(
     'docker run',
     '--rm',
     networkFlag,
-    `--memory="512m"`,         // Memory limit
-    `--cpus="1"`,              // CPU limit
+    `--memory="2g"`,         // 2GB RAM
+    `--cpus="2"`,              // 2 CPU cores
     `--ulimit nofile=1024:1024`, // File descriptor limit
     `-v "${dockerPath}:/app/project"`,
     envFlags,
@@ -241,16 +241,12 @@ export async function runContainer(
     return { stdout, stderr };
   } catch (err: unknown) {
     const execErr = err as { stdout?: string; stderr?: string; message?: string };
-    // execAsync rejects on non-zero exit code too
-    const stdout = execErr.stdout ?? '';
-    const stderr = execErr.stderr ?? '';
-
-    console.error('[sandboxService] Docker run error:', execErr.message);
-    console.error('[sandboxService] stdout:', stdout.substring(0, 500));
-    console.error('[sandboxService] stderr:', stderr.substring(0, 500));
-
     // Don't throw — let collectResults handle the failure via result.json
-    return { stdout, stderr };
+    // But return whatever we got for debugging
+    return { 
+      stdout: (execErr.stdout ?? "") + (execErr.message ? `\nError Message: ${execErr.message}` : ""), 
+      stderr: execErr.stderr ?? ""
+    };
   }
 }
 
@@ -353,14 +349,26 @@ export async function compileContract(
   try {
     context = await createSandbox(soliditySource, { mode: 'compile', contractName });
 
-    await runContainer(
+    const { stdout, stderr } = await runContainer(
       context.sandboxPath,
       `npx hardhat run /app/project/scripts/compile.js --config /app/project/hardhat.config.js`,
       { CONTRACT_NAME: context.contractName },
       false // no network needed for compile
     );
 
-    return collectCompileResult(context.sandboxPath);
+    const result = collectCompileResult(context.sandboxPath);
+    
+    // If result.json missing, it means container crashed or hardhat failed
+    if (!result.success && result.error?.includes('No result.json')) {
+      const errorDetail = stderr || stdout || 'Unknown error during compilation.';
+      return {
+        ...result,
+        error: `Compilation Failed: ${errorDetail.split('\n')[0]}`,
+        details: errorDetail
+      };
+    }
+
+    return result;
   } catch (err) {
     console.error('[sandboxService] compileContract error:', err);
     return {

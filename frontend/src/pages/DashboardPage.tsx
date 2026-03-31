@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   HiOutlineWallet,
   HiOutlineFolder,
@@ -15,6 +16,7 @@ import type { ApiResponse, Wallet, Project } from '../types';
 import './DashboardPage.css';
 
 export default function DashboardPage() {
+  const { t } = useTranslation();
   const [walletCount, setWalletCount] = useState(0);
   const [projectCount, setProjectCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,15 +44,16 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <PageWrapper title="Dashboard" subtitle="Overview of your SContract workspace">
+    <PageWrapper title={t('nav.dashboard')} subtitle={t('pages.dashboard.subtitle')}>
       {/* Stats */}
+
       <div className="dashboard-stats">
         <div className="stat-card">
           <div className="stat-icon purple">
             <HiOutlineWallet />
           </div>
           <div className="stat-info">
-            <h3>Wallets</h3>
+            <h3>{t('dashboard.stats.wallets')}</h3>
             <div className="stat-value">
               {isLoading ? <div className="skeleton" style={{ width: 40, height: 36 }} /> : walletCount}
             </div>
@@ -62,7 +65,7 @@ export default function DashboardPage() {
             <HiOutlineFolder />
           </div>
           <div className="stat-info">
-            <h3>Projects</h3>
+            <h3>{t('dashboard.stats.projects')}</h3>
             <div className="stat-value">
               {isLoading ? <div className="skeleton" style={{ width: 40, height: 36 }} /> : projectCount}
             </div>
@@ -74,7 +77,7 @@ export default function DashboardPage() {
             <HiOutlineClock />
           </div>
           <div className="stat-info">
-            <h3>Transactions</h3>
+            <h3>{t('dashboard.stats.transactions')}</h3>
             <div className="stat-value">0</div>
           </div>
         </div>
@@ -84,7 +87,7 @@ export default function DashboardPage() {
             <HiOutlineCpuChip />
           </div>
           <div className="stat-info">
-            <h3>Network</h3>
+            <h3>{t('dashboard.stats.network')}</h3>
             <div className="stat-value" style={{ fontSize: 'var(--font-size-lg)' }}>BSC Testnet</div>
           </div>
         </div>
@@ -92,33 +95,34 @@ export default function DashboardPage() {
 
       {/* Quick Actions */}
       <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-4)' }}>
-        Quick Actions
+        {t('dashboard.quick_actions.title')}
       </h2>
       <div className="dashboard-quick-actions">
         <Link to="/projects/create" className="quick-action-card">
           <div className="quick-action-icon"><HiOutlinePlusCircle /></div>
-          <h3>New Project</h3>
-          <p>Deploy a smart contract</p>
+          <h3>{t('dashboard.quick_actions.new_project.title')}</h3>
+          <p>{t('dashboard.quick_actions.new_project.desc')}</p>
         </Link>
 
         <Link to="/explore" className="quick-action-card">
           <div className="quick-action-icon"><HiOutlineGlobeAlt /></div>
-          <h3>Explore</h3>
-          <p>Browse deployed contracts</p>
+          <h3>{t('dashboard.quick_actions.explore.title')}</h3>
+          <p>{t('dashboard.quick_actions.explore.desc')}</p>
         </Link>
 
         <Link to="/wallets" className="quick-action-card">
           <div className="quick-action-icon"><HiOutlineWallet /></div>
-          <h3>Manage Wallets</h3>
-          <p>Create & fund wallets</p>
+          <h3>{t('dashboard.quick_actions.manage_wallets.title')}</h3>
+          <p>{t('dashboard.quick_actions.manage_wallets.desc')}</p>
         </Link>
 
         <Link to="/transactions" className="quick-action-card">
           <div className="quick-action-icon"><HiOutlineBeaker /></div>
-          <h3>Transaction History</h3>
-          <p>View past transactions</p>
+          <h3>{t('dashboard.quick_actions.history.title')}</h3>
+          <p>{t('dashboard.quick_actions.history.desc')}</p>
         </Link>
       </div>
     </PageWrapper>
   );
 }
+

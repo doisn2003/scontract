@@ -23,7 +23,7 @@ import ProjectDetailPage from './pages/ProjectDetailPage';
 import ExplorePage from './pages/ExplorePage';
 import InteractPage from './pages/InteractPage';
 import TestPage from './pages/TestPage';
-import PlaceholderPage from './pages/PlaceholderPage';
+import TransactionHistoryPage from './pages/TransactionHistoryPage';
 
 /**
  * Layout wrapper that includes Navbar + Sidebar for authenticated pages
@@ -91,7 +91,7 @@ function AppRoutes() {
       <Route path="/projects/:id/interact" element={<ProtectedPage><InteractPage /></ProtectedPage>} />
       <Route path="/projects/:id/test" element={<ProtectedPage><TestPage /></ProtectedPage>} />
       <Route path="/explore" element={<ProtectedPage><ExplorePage /></ProtectedPage>} />
-      <Route path="/transactions" element={<ProtectedPage><PlaceholderPage title="Transaction History" subtitle="View all your transactions" /></ProtectedPage>} />
+      <Route path="/transactions" element={<ProtectedPage><TransactionHistoryPage /></ProtectedPage>} />
 
       {/* Default redirect */}
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

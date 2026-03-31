@@ -1,0 +1,132 @@
+/* DeployGasEstimate.css */
+
+.deploy-gas-box {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.08) 0%,
+    rgba(99, 102, 241, 0.06) 100%
+  );
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: var(--radius-xl);
+  margin-bottom: var(--space-4);
+  position: relative;
+  animation: fadeIn 0.3s ease;
+}
+
+.deploy-gas-box.loading {
+  background: var(--color-bg-card);
+  border-color: var(--color-border);
+  gap: var(--space-3);
+  align-items: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.deploy-gas-box.error {
+  background: var(--color-error-bg, rgba(239, 68, 68, 0.08));
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.deploy-gas-box.error .deploy-gas-icon {
+  color: var(--color-error, #ef4444);
+}
+
+.deploy-gas-box.error .deploy-gas-title {
+  color: var(--color-error, #ef4444);
+}
+
+.deploy-gas-icon {
+  font-size: 1.5rem;
+  color: #818cf8; /* indigo-400 */
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.deploy-gas-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.deploy-gas-title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #818cf8;
+}
+
+.deploy-gas-values {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.deploy-gas-bnb {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.deploy-gas-sep {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.deploy-gas-usd {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: #4ade80; /* green-400 */
+}
+
+.deploy-gas-limit {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  cursor: default;
+}
+
+.deploy-gas-deployer {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.deploy-gas-deployer .mono {
+  color: var(--color-text-secondary);
+}
+
+.deploy-gas-detail {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.deploy-gas-refresh {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-base);
+  display: inline-flex;
+  align-items: center;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.deploy-gas-refresh:hover {
+  color: #818cf8;
+  background: rgba(99, 102, 241, 0.1);
+  transform: rotate(90deg);
+}
