@@ -20,6 +20,11 @@ const projectSchema = new Schema<IProject>(
       trim: true,
       maxlength: [100, 'Project name cannot exceed 100 characters'],
     },
+    contractName: {
+      type: String,
+      default: '',
+      trim: true,
+    },
     description: {
       type: String,
       default: '',

@@ -57,7 +57,7 @@ export default function TestPage() {
       if (data.success && data.data) {
         setProject(data.data);
         // Auto-fill template
-        const contractName = data.data.name || 'MyContract';
+        const contractName = data.data.contractName || data.data.name || 'MyContract';
         setTestCode(getViemTemplate(contractName));
       }
     } catch {
@@ -72,7 +72,7 @@ export default function TestPage() {
   // Library switch → update template
   const handleLibraryChange = (lib: TestLibrary) => {
     setLibrary(lib);
-    const contractName = project?.name || 'MyContract';
+    const contractName = project?.contractName || project?.name || 'MyContract';
     const template = lib === 'viem'
       ? getViemTemplate(contractName)
       : getEthersTemplate(contractName);
@@ -163,7 +163,7 @@ export default function TestPage() {
             <button
               className="btn btn-ghost btn-sm"
               onClick={() => {
-                const contractName = project.name || 'MyContract';
+                const contractName = project.contractName || project.name || 'MyContract';
                 setTestCode(library === 'viem' ? getViemTemplate(contractName) : getEthersTemplate(contractName));
                 toast.success('Template reset');
               }}

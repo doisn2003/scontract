@@ -38,6 +38,38 @@
   margin-bottom: var(--space-3);
 }
 
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.btn-delete {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: var(--space-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-base);
+  opacity: 0;
+  visibility: hidden;
+}
+
+.btn-delete:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444; /* Red icon on hover */
+}
+
+.project-card:hover .btn-delete {
+  opacity: 1;
+  visibility: visible;
+}
+
+
 .project-card-name {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
@@ -51,6 +83,7 @@
   margin-bottom: var(--space-4);
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

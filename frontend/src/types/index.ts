@@ -57,6 +57,7 @@ export interface Project {
   userId: string;
   walletId: string | { _id: string; address: string };
   name: string;
+  contractName: string;
   description: string;
   soliditySource: string;
   abi: AbiItem[] | null;

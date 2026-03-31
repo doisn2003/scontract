@@ -189,3 +189,29 @@ export const estimateDeployGas = async (req: Request, res: Response): Promise<vo
     sendError(res, message, statusCode);
   }
 };
+
+/**
+ * DELETE /api/projects/:id
+ * Delete a project (must be owner).
+ */
+export const deleteProject = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?.id;
+    if (!userId) { sendError(res, 'Unauthorized', 401); return; }
+
+    const projectId = req.params.id as string;
+    if (!projectId) { sendError(res, 'Project ID is required', 400); return; }
+
+    await projectService.deleteProject(projectId, userId);
+
+    sendSuccess(res, 'Project deleted successfully');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to delete project';
+    const statusCode = message.includes('not authorized') ? 403
+      : message.includes('not found') ? 404
+      : 500;
+    sendError(res, message, statusCode);
+  }
+};
+

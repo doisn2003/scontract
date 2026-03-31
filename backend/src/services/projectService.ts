@@ -44,6 +44,7 @@ export async function createProject(
     userId,
     walletId,
     name: name || contractName,
+    contractName,
     description: description || '',
     soliditySource,
     solidityVersion,
@@ -83,6 +84,7 @@ export async function compileProject(projectId: string, userId: string) {
   // Update project with compile results
   project.abi = result.abi as any;
   project.bytecode = result.bytecode || '';
+  project.contractName = contractName; // Keep synced
   project.solidityVersion = extractSolidityVersion(project.soliditySource);
   project.status = 'compiled';
   await project.save();
@@ -291,4 +293,11 @@ export async function estimateDeployGas(
     bnbPrice,
     deployerAddress: wallet.address,
   };
+}
+
+export async function deleteProject(projectId: string, userId: string) {
+  const result = await Project.deleteOne({ _id: projectId, userId });
+  if (result.deletedCount === 0) {
+    throw new Error('Project not found or you are not authorized to delete it');
+  }
 }
