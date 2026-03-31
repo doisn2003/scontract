@@ -50,10 +50,15 @@ export default function ExplorePage() {
         {isLoading ? (
           <div className="explore-grid">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="explore-card">
-                <div className="skeleton" style={{ height: 24, width: '60%', marginBottom: 12 }} />
-                <div className="skeleton" style={{ height: 16, width: '100%', marginBottom: 16 }} />
-                <div className="skeleton" style={{ height: 32 }} />
+              <div key={i} className="explore-card" style={{ height: 180 }}>
+                <div className="explore-card-header">
+                  <div className="skeleton" style={{ height: 20, width: '60%' }} />
+                </div>
+                <div className="skeleton" style={{ height: 24, marginBottom: 16 }} />
+                <div className="skeleton" style={{ height: 28, width: '70%', marginBottom: 16 }} />
+                <div className="explore-card-footer">
+                  <div className="skeleton" style={{ height: 16, width: '40%' }} />
+                </div>
               </div>
             ))}
           </div>
@@ -75,9 +80,9 @@ export default function ExplorePage() {
                   <span className="badge badge-success">Deployed</span>
                 </div>
 
-                {p.description && (
-                  <p className="explore-card-desc">{p.description}</p>
-                )}
+                <p className="explore-card-desc">
+                  {p.description || t('pages.explore.no_desc_fallback')}
+                </p>
 
                 <div className="explore-card-address mono">
                   <HiOutlineRocketLaunch />

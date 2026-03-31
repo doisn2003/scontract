@@ -22,7 +22,8 @@
     },
     "explore": {
       "title": "Explore",
-      "subtitle": "Browse smart contracts deployed on BSC Testnet"
+      "subtitle": "Browse smart contracts deployed on BSC Testnet",
+      "no_desc_fallback": "No description provided for this smart contract."
     },
     "test": {
       "title": "Run Tests",

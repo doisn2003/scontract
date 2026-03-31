@@ -22,7 +22,8 @@
     },
     "explore": {
       "title": "Khám phá",
-      "subtitle": "Khám phá các Smart Contract đã triển khai trên BSC Testnet"
+      "subtitle": "Khám phá các Smart Contract đã triển khai trên BSC Testnet",
+      "no_desc_fallback": "Không có mô tả cho Smart Contract này."
     },
     "test": {
       "title": "Chạy kiểm thử",
