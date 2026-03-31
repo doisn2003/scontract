@@ -12,7 +12,7 @@ import { ethers } from 'ethers';
 import Project from '../models/Project.js';
 import Wallet from '../models/Wallet.js';
 import { decrypt } from '../utils/encryption.js';
-import { extractSolidityVersion, extractContractName } from '../utils/solidityParser.js';
+import { extractSolidityVersion, extractContractName, repairAddressChecksums } from '../utils/solidityParser.js';
 import { compileContract } from './sandboxService.js';
 import { createTransaction, getBnbPriceUSD } from './transactionService.js';
 
@@ -72,13 +72,22 @@ export async function compileProject(projectId: string, userId: string) {
   // Extract contract name from source
   const contractName = extractContractName(project.soliditySource);
 
+  // ALWAYS repair checksums before compilation to be safe
+  const repairedSource = repairAddressChecksums(project.soliditySource);
+  if (repairedSource !== project.soliditySource) {
+    project.soliditySource = repairedSource;
+    // Don't save yet, will save with ABI/Status
+  }
+
   console.log(`[projectService] Compiling project ${projectId}: ${contractName}`);
 
   // Delegate to sandboxService (Phase 3)
   const result = await compileContract(project.soliditySource, contractName);
 
   if (!result.success) {
-    throw new Error(result.error || 'Compilation failed');
+    const err = new Error(result.error || 'Compilation failed') as any;
+    err.details = result.details;
+    throw err;
   }
 
   // Update project with compile results
