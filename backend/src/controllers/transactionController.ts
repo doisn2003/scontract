@@ -19,8 +19,9 @@ export const recordTransaction = async (req: Request, res: Response): Promise<vo
     const userId = authReq.user?.id;
     if (!userId) { sendError(res, 'Unauthorized', 401); return; }
 
-    const { projectId, txHash, functionName, args, gasUsed } = req.body as {
+    const { projectId, contractId, txHash, functionName, args, gasUsed } = req.body as {
       projectId: string;
+      contractId?: string;
       txHash: string;
       functionName: string;
       args?: unknown[];
@@ -39,6 +40,7 @@ export const recordTransaction = async (req: Request, res: Response): Promise<vo
 
     const tx = await transactionService.createTransaction({
       projectId,
+      contractId,
       userId,
       txHash,
       functionName,

@@ -88,8 +88,8 @@ function AppRoutes() {
       <Route path="/projects/create" element={<ProtectedPage><CreateProjectPage /></ProtectedPage>} />
       <Route path="/projects" element={<ProtectedPage><ProjectListPage /></ProtectedPage>} />
       <Route path="/projects/:id" element={<ProtectedPage><ProjectDetailPage /></ProtectedPage>} />
-      <Route path="/projects/:id/interact" element={<ProtectedPage><InteractPage /></ProtectedPage>} />
-      <Route path="/projects/:id/test" element={<ProtectedPage><TestPage /></ProtectedPage>} />
+      <Route path="/projects/:id/contracts/:contractId/interact" element={<ProtectedPage><InteractPage /></ProtectedPage>} />
+      <Route path="/projects/:id/contracts/:contractId/test" element={<ProtectedPage><TestPage /></ProtectedPage>} />
       <Route path="/explore" element={<ProtectedPage><ExplorePage /></ProtectedPage>} />
       <Route path="/transactions" element={<ProtectedPage><TransactionHistoryPage /></ProtectedPage>} />
 

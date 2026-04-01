@@ -57,6 +57,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     // Generate JWT
     const token = generateToken(user._id.toString(), user.email);
 
+    console.log(`[AUTH] User registered: ${user.email} (ID: ${user._id})`);
+
     sendSuccess(res, 'Registration successful', {
       user: {
         _id: user._id,
@@ -105,6 +107,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     // Generate JWT
     const token = generateToken(user._id.toString(), user.email);
 
+    console.log(`[AUTH] User logged in: ${user.email} (ID: ${user._id})`);
+
     sendSuccess(res, 'Login successful', {
       user: {
         _id: user._id,
@@ -149,5 +153,23 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to get user info';
     sendError(res, message, 500);
+  }
+};
+
+/**
+ * POST /api/auth/logout
+ */
+export const logout = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authReq = req as AuthRequest;
+    const userEmail = authReq.user?.email || 'unknown';
+    
+    console.log(`[AUTH] User logging out: ${userEmail}`);
+    
+    // JWT is stateless, so we just log it. 
+    // The frontend will remove the token from local storage.
+    sendSuccess(res, 'Logged out successfully');
+  } catch (error) {
+    sendError(res, 'Logout failed', 500);
   }
 };

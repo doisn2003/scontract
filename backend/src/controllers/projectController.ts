@@ -29,17 +29,23 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
       contracts: { soliditySource: string; name?: string }[];
     };
 
+    const stamp = new Date().toISOString();
+    console.log(`[STAMP_CHECK] ${stamp} - Creating project:`, { name, contractCount: contracts?.length });
+
     if (!walletId) { sendError(res, 'walletId is required', 400); return; }
     if (!contracts || !Array.isArray(contracts) || contracts.length === 0) {
       sendError(res, 'At least one contract is required', 400); return;
     }
 
-    for (const c of contracts) {
+    // Validation for each contract
+    for (const [idx, c] of contracts.entries()) {
       if (!c.soliditySource || typeof c.soliditySource !== 'string') {
-        sendError(res, 'Each contract must have a soliditySource string', 400); return;
+        sendError(res, `Contract at index ${idx} must have a soliditySource string`, 400); 
+        return;
       }
       if (!c.soliditySource.includes('pragma solidity')) {
-        sendError(res, 'Invalid Solidity source: missing pragma statement', 400); return;
+        sendError(res, `Invalid Solidity source in contract "${c.name || idx}": missing pragma statement`, 400); 
+        return;
       }
     }
 
@@ -49,8 +55,11 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
 
     sendSuccess(res, 'Project created successfully', project, 201);
   } catch (error) {
+    console.error('[projectController] Error in createProject:', error);
     const message = error instanceof Error ? error.message : 'Failed to create project';
-    sendError(res, message, 500);
+    // If it's a Mongoose validation error, it's likely our 400 culprit
+    const isValidationError = error instanceof Error && error.name === 'ValidationError';
+    sendError(res, message, isValidationError ? 400 : 500);
   }
 };
 
@@ -156,12 +165,22 @@ export const addContract = async (req: Request, res: Response): Promise<void> =>
     if (!userId) { sendError(res, 'Unauthorized', 401); return; }
 
     const projectId = req.params['id'] as string;
-    const { soliditySource, name } = req.body as { soliditySource: string; name?: string };
+    let { soliditySource, name } = req.body as { soliditySource?: string; name?: string };
 
-    if (!soliditySource || typeof soliditySource !== 'string') {
-      sendError(res, 'soliditySource is required', 400); return;
+    if (!soliditySource) {
+      const contractName = name || 'NewContract';
+      soliditySource = `// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+contract ${contractName} {
+    uint256 public value;
+    
+    function setValue(uint256 _value) public {
+        value = _value;
     }
-    if (!soliditySource.includes('pragma solidity')) {
+}
+`;
+    } else if (!soliditySource.includes('pragma solidity')) {
       sendError(res, 'Invalid Solidity source: missing pragma statement', 400); return;
     }
 

@@ -121,7 +121,7 @@ export async function getTransactions(opts: GetTransactionsOptions) {
 
   const [transactions, total] = await Promise.all([
     Transaction.find(filter)
-      .populate('projectId', 'name network contractAddress')
+      .populate('projectId', 'name network contractAddress contracts')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)

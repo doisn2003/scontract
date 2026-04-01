@@ -117,3 +117,123 @@
   padding-top: var(--space-4);
   border-top: 1px solid var(--color-border);
 }
+
+/* Contract Setup Layout */
+.contract-setup-container {
+  display: flex;
+  gap: var(--space-6);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-top: var(--space-4);
+  min-height: 500px;
+}
+
+.contract-list-sidebar {
+  width: 240px;
+  background: var(--color-bg-sidebar);
+  border-right: 1px solid var(--color-border);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.contract-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.contract-item:hover {
+  background: var(--color-bg-hover);
+}
+
+.contract-item.active {
+  background: var(--color-accent);
+  color: white;
+}
+
+.contract-item-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.contract-item-remove {
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.contract-item-remove:hover {
+  opacity: 1;
+}
+
+.btn-add-manual {
+  margin-top: var(--space-4);
+  width: 100%;
+  padding: var(--space-2);
+  border: 1px dashed var(--color-border);
+  background: none;
+  border-radius: var(--radius-md);
+  color: var(--color-accent);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: var(--font-size-sm);
+}
+
+.contract-editor-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-header {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.contract-name-input {
+  background: none;
+  border: none;
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-base);
+  width: 100%;
+}
+
+.contract-name-input:focus {
+  outline: none;
+}
+
+.contract-editor-main .source-textarea {
+  border: none;
+  border-radius: 0;
+  flex: 1;
+  background: transparent;
+}
+
+.center-add {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-4);
+}

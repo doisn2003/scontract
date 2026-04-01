@@ -52,23 +52,31 @@ export interface Wallet {
 // --- Project ---
 export type ProjectStatus = 'created' | 'compiled' | 'deployed';
 
+export interface SmartContract {
+  _id: string;
+  name: string;
+  soliditySource: string;
+  solidityVersion: string | null;
+  abi: AbiItem[] | null;
+  bytecode: string | null;
+  contractAddress: string | null;
+  status: ProjectStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Project {
   _id: string;
   userId: string;
   walletId: string | { _id: string; address: string };
   name: string;
-  contractName: string;
   description: string;
-  soliditySource: string;
-  abi: AbiItem[] | null;
-  bytecode: string | null;
-  contractAddress: string | null;
-  solidityVersion: string | null;
-  status: ProjectStatus;
+  contracts: SmartContract[];
   network: string;
   createdAt: string;
   updatedAt: string;
 }
+
 
 // --- ABI ---
 export interface AbiInput {
@@ -92,7 +100,13 @@ export type TransactionStatus = 'pending' | 'success' | 'failed';
 
 export interface Transaction {
   _id: string;
-  projectId: string;
+  projectId: string | { 
+    _id: string; 
+    name: string; 
+    network: string; 
+    contracts: { _id: string; name: string }[] 
+  };
+  contractId?: string | null;
   userId: string;
   txHash: string;
   functionName: string;

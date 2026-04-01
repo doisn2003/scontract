@@ -17,9 +17,12 @@ interface ExploreProject {
   _id: string;
   name: string;
   description?: string;
-  contractAddress: string;
+  contracts: {
+    name: string;
+    contractAddress: string | null;
+    status: string;
+  }[];
   network: string;
-  status: string;
   createdAt: string;
   userId: string;
 }

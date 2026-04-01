@@ -6,6 +6,7 @@ import {
   HiOutlineDocumentArrowUp,
   HiOutlineWallet,
   HiOutlinePlusCircle,
+  HiOutlineXMark,
 } from 'react-icons/hi2';
 import toast from 'react-hot-toast';
 import PageWrapper from '../components/Layout/PageWrapper';
@@ -23,8 +24,8 @@ export default function CreateProjectPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [walletId, setWalletId] = useState('');
-  const [soliditySource, setSoliditySource] = useState('');
-  const [fileName, setFileName] = useState('');
+  const [contracts, setContracts] = useState<{ id: string; name: string; soliditySource: string }[]>([]);
+  const [activeContractId, setActiveContractId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch wallets
@@ -45,35 +46,64 @@ export default function CreateProjectPage() {
   useEffect(() => { fetchWallets(); }, [fetchWallets]);
 
   // File drop/upload handler
-  const handleFileSelect = (file: File) => {
-    if (!file.name.endsWith('.sol')) {
-      toast.error('Please select a .sol (Solidity) file');
-      return;
-    }
-    if (file.size > 500 * 1024) {
-      toast.error('File too large (max 500KB)');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target?.result as string;
-      setSoliditySource(content);
-      setFileName(file.name);
-      // Auto-fill name from filename if empty
-      if (!name) {
-        setName(file.name.replace('.sol', ''));
+  const handleFileSelect = (files: FileList) => {
+    Array.from(files).forEach(file => {
+      if (!file.name.endsWith('.sol')) {
+        toast.error(`${file.name} is not a Solidity file`);
+        return;
       }
-      toast.success(`Loaded ${file.name}`);
-    };
-    reader.readAsText(file);
+      if (file.size > 500 * 1024) {
+        toast.error(`${file.name} is too large (max 500KB)`);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        const newContract = {
+          id: Math.random().toString(36).substring(2, 9),
+          name: file.name.replace('.sol', ''),
+          soliditySource: content
+        };
+        setContracts(prev => [...prev, newContract]);
+        setActiveContractId(newContract.id);
+        
+        // Auto-fill project name if empty
+        if (!name) {
+          setName(file.name.replace('.sol', ' Project'));
+        }
+        toast.success(`Loaded ${file.name}`);
+      };
+      reader.readAsText(file);
+    });
+  };
+
+  const handleRemoveContract = (id: string) => {
+    setContracts(prev => {
+      const filtered = prev.filter(c => c.id !== id);
+      if (activeContractId === id) {
+        setActiveContractId(filtered[0]?.id || null);
+      }
+      return filtered;
+    });
+  };
+
+  const handleUpdateActiveSource = (source: string) => {
+    setContracts(prev => prev.map(c => 
+      c.id === activeContractId ? { ...c, soliditySource: source } : c
+    ));
+  };
+
+  const handleUpdateActiveName = (newName: string) => {
+    setContracts(prev => prev.map(c => 
+      c.id === activeContractId ? { ...c, name: newName } : c
+    ));
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const file = e.dataTransfer.files[0];
-    if (file) handleFileSelect(file);
+    if (e.dataTransfer.files) handleFileSelect(e.dataTransfer.files);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -89,13 +119,17 @@ export default function CreateProjectPage() {
       toast.error('Please select a wallet');
       return;
     }
-    if (!soliditySource.trim()) {
-      toast.error('Please upload a Solidity file or paste source code');
+    if (contracts.length === 0) {
+      toast.error('Please add at least one Solidity contract');
       return;
     }
-    if (!soliditySource.includes('pragma solidity')) {
-      toast.error('Invalid Solidity: missing pragma statement');
-      return;
+    
+    // Simple validation
+    for (const c of contracts) {
+      if (!c.soliditySource.includes('pragma solidity')) {
+        toast.error(`Invalid Solidity in ${c.name}: missing pragma statement`);
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -104,7 +138,10 @@ export default function CreateProjectPage() {
         walletId,
         name: name || 'Untitled Project',
         description,
-        soliditySource,
+        contracts: contracts.map(c => ({
+          name: c.name,
+          soliditySource: c.soliditySource
+        }))
       });
 
       if (data.success && data.data) {
@@ -179,11 +216,11 @@ export default function CreateProjectPage() {
         <div className="form-section">
           <label className="input-label">
             <HiOutlineCodeBracket style={{ verticalAlign: 'middle', marginRight: 6 }} />
-            Solidity Source Code
+            Solidity Contracts
           </label>
 
           <div
-            className={`drop-zone ${soliditySource ? 'has-file' : ''}`}
+            className={`drop-zone ${contracts.length > 0 ? 'has-file' : ''}`}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onClick={() => document.getElementById('sol-file-input')?.click()}
@@ -192,42 +229,97 @@ export default function CreateProjectPage() {
               id="sol-file-input"
               type="file"
               accept=".sol"
+              multiple
               style={{ display: 'none' }}
               onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleFileSelect(file);
+                if (e.target.files) handleFileSelect(e.target.files);
               }}
             />
-            {soliditySource ? (
-              <div className="drop-zone-loaded">
-                <HiOutlineDocumentArrowUp className="drop-zone-icon loaded" />
-                <span className="drop-zone-filename">{fileName || 'Source loaded'}</span>
-                <span className="drop-zone-hint">Click or drop to replace</span>
-              </div>
-            ) : (
-              <div className="drop-zone-empty">
-                <HiOutlineDocumentArrowUp className="drop-zone-icon" />
-                <span className="drop-zone-text">Drop your <strong>.sol</strong> file here</span>
-                <span className="drop-zone-hint">or click to browse</span>
-              </div>
-            )}
+            <div className="drop-zone-empty">
+              <HiOutlineDocumentArrowUp className="drop-zone-icon" />
+              <span className="drop-zone-text">Drop <strong>.sol</strong> files here</span>
+              <span className="drop-zone-hint">or click to browse multiple</span>
+            </div>
           </div>
         </div>
 
-        {/* Source Code Preview / Textarea */}
-        <div className="form-section">
-          <label className="input-label">
-            Source Preview {soliditySource && <span className="char-count">({soliditySource.length} chars)</span>}
-          </label>
-          <textarea
-            className="input source-textarea"
-            placeholder="// SPDX-License-Identifier: MIT&#10;pragma solidity ^0.8.20;&#10;&#10;contract MyContract {&#10;    // ...&#10;}"
-            value={soliditySource}
-            onChange={(e) => setSoliditySource(e.target.value)}
-            rows={12}
-            spellCheck={false}
-          />
-        </div>
+        {/* Contract List & Editor */}
+        {contracts.length > 0 && (
+          <div className="contract-setup-container">
+            <div className="contract-list-sidebar">
+              {contracts.map(c => (
+                <div 
+                  key={c.id} 
+                  className={`contract-item ${activeContractId === c.id ? 'active' : ''}`}
+                  onClick={() => setActiveContractId(c.id)}
+                >
+                  <span className="contract-item-name">{c.name}</span>
+                  <button 
+                    type="button" 
+                    className="contract-item-remove"
+                    onClick={(e) => { e.stopPropagation(); handleRemoveContract(c.id); }}
+                  >
+                    <HiOutlineXMark />
+                  </button>
+                </div>
+              ))}
+              <button 
+                type="button" 
+                className="btn-add-manual"
+                onClick={() => {
+                  const id = Math.random().toString(36).substring(2, 9);
+                  const newC = { id, name: 'NewContract', soliditySource: 'pragma solidity ^0.8.20;\n\ncontract NewContract {\n\n}' };
+                  setContracts([...contracts, newC]);
+                  setActiveContractId(id);
+                }}
+              >
+                <HiOutlinePlusCircle /> Add More
+              </button>
+            </div>
+
+            <div className="contract-editor-main">
+              {activeContractId && (
+                <>
+                   <div className="editor-header">
+                    <input 
+                      className="contract-name-input"
+                      value={contracts.find(c => c.id === activeContractId)?.name || ''}
+                      onChange={(e) => handleUpdateActiveName(e.target.value)}
+                      placeholder="Contract Name"
+                    />
+                    <span className="char-count">
+                      ({contracts.find(c => c.id === activeContractId)?.soliditySource.length || 0} chars)
+                    </span>
+                  </div>
+                  <textarea
+                    className="input source-textarea"
+                    value={contracts.find(c => c.id === activeContractId)?.soliditySource || ''}
+                    onChange={(e) => handleUpdateActiveSource(e.target.value)}
+                    rows={15}
+                    spellCheck={false}
+                  />
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Empty state manual add */}
+        {contracts.length === 0 && (
+          <div className="form-section center-add">
+            <button 
+              type="button" 
+              className="btn btn-ghost"
+              onClick={() => {
+                const id = Math.random().toString(36).substring(2, 9);
+                setContracts([{ id, name: 'MyContract', soliditySource: 'pragma solidity ^0.8.20;\n\ncontract MyContract {\n\n}' }]);
+                setActiveContractId(id);
+              }}
+            >
+              <HiOutlinePlusCircle /> Or start with a blank contract
+            </button>
+          </div>
+        )}
 
         {/* Submit */}
         <div className="form-actions">
@@ -241,7 +333,7 @@ export default function CreateProjectPage() {
           <button
             type="submit"
             className="btn btn-primary btn-lg"
-            disabled={isSubmitting || !soliditySource.trim() || !walletId}
+            disabled={isSubmitting || contracts.length === 0 || !walletId}
           >
             {isSubmitting ? (
               <><span className="spinner" /> Creating...</>

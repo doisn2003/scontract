@@ -17,6 +17,7 @@ import './DeployGasEstimate.css';
 
 interface DeployGasEstimateProps {
   projectId: string;
+  contractId: string;
 }
 
 interface GasEstimateResult {
@@ -27,17 +28,18 @@ interface GasEstimateResult {
   deployerAddress: string;
 }
 
-export default function DeployGasEstimate({ projectId }: DeployGasEstimateProps) {
+export default function DeployGasEstimate({ projectId, contractId }: DeployGasEstimateProps) {
   const [result, setResult] = useState<GasEstimateResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchEstimate = async () => {
+    if (!projectId || !contractId) return;
     setIsLoading(true);
     setError(null);
     try {
       const { data } = await api.get<ApiResponse<GasEstimateResult>>(
-        `/projects/${projectId}/estimate-deploy`
+        `/projects/${projectId}/contracts/${contractId}/estimate-deploy`
       );
       if (data.success && data.data) {
         setResult(data.data);
