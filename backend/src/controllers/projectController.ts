@@ -308,9 +308,15 @@ export const estimateDeployGas = async (req: Request, res: Response): Promise<vo
     sendSuccess(res, 'Gas estimate calculated', result);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to estimate gas';
+    const isI18nError = message.startsWith('common.errors');
     const statusCode = message.includes('not found') ? 404
-      : message.includes('Must compile') ? 400
+      : (message.includes('Must compile') || isI18nError) ? 200
       : 500;
-    sendError(res, message, statusCode);
+      
+    if (isI18nError || message.includes('Must compile')) {
+      res.status(200).json({ success: false, message });
+    } else {
+      sendError(res, message, statusCode);
+    }
   }
 };

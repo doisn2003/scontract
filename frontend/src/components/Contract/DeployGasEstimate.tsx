@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   HiOutlineBeaker,
   HiOutlineArrowPath,
@@ -29,6 +30,7 @@ interface GasEstimateResult {
 }
 
 export default function DeployGasEstimate({ projectId, contractId }: DeployGasEstimateProps) {
+  const { t } = useTranslation();
   const [result, setResult] = useState<GasEstimateResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,10 +45,11 @@ export default function DeployGasEstimate({ projectId, contractId }: DeployGasEs
       );
       if (data.success && data.data) {
         setResult(data.data);
+      } else if (!data.success) {
+        setError(data.message || 'Could not estimate gas');
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Could not estimate gas';
-      setError(msg);
+      setError(err?.response?.data?.message || 'Could not estimate gas');
     } finally {
       setIsLoading(false);
     }
@@ -61,7 +64,7 @@ export default function DeployGasEstimate({ projectId, contractId }: DeployGasEs
     return (
       <div className="deploy-gas-box loading">
         <span className="spinner" style={{ width: 16, height: 16 }} />
-        <span>Đang tính phí gas ước tính...</span>
+        <span>{t('deploy_gas.loading')}</span>
       </div>
     );
   }
@@ -71,10 +74,12 @@ export default function DeployGasEstimate({ projectId, contractId }: DeployGasEs
       <div className="deploy-gas-box error">
         <HiOutlineExclamationTriangle className="deploy-gas-icon" />
         <div className="deploy-gas-content">
-          <span className="deploy-gas-title">Không thể ước tính phí</span>
-          <span className="deploy-gas-detail">{error}</span>
+          <span className="deploy-gas-title">{t('deploy_gas.estimate_failed')}</span>
+          <span className="deploy-gas-detail">
+            {error.startsWith('common.errors') ? t(error) : error}
+          </span>
         </div>
-        <button className="deploy-gas-refresh btn-ghost btn-sm" onClick={fetchEstimate}>
+        <button className="deploy-gas-refresh btn-ghost btn-sm" onClick={fetchEstimate} title={t('deploy_gas.recalculate')}>
           <HiOutlineArrowPath />
         </button>
       </div>
@@ -89,7 +94,7 @@ export default function DeployGasEstimate({ projectId, contractId }: DeployGasEs
     <div className="deploy-gas-box">
       <HiOutlineBeaker className="deploy-gas-icon" />
       <div className="deploy-gas-content">
-        <span className="deploy-gas-title">Phí Gas ước tính</span>
+        <span className="deploy-gas-title">{t('deploy_gas.estimated_fee')}</span>
         <div className="deploy-gas-values">
           <span className="deploy-gas-bnb">
             ~{parseFloat(result.gasBNB).toFixed(6)} BNB
@@ -102,14 +107,14 @@ export default function DeployGasEstimate({ projectId, contractId }: DeployGasEs
           </span>
         </div>
         <span className="deploy-gas-deployer" title={result.deployerAddress}>
-          Deployer: <span className="mono">{shortAddr}</span>
+          {t('deploy_gas.deployer')}: <span className="mono">{shortAddr}</span>
           &nbsp;·&nbsp; 1 BNB ≈ ${result.bnbPrice.toFixed(0)}
         </span>
       </div>
       <button
         className="deploy-gas-refresh"
         onClick={fetchEstimate}
-        title="Tính lại"
+        title={t('deploy_gas.recalculate')}
       >
         <HiOutlineArrowPath />
       </button>

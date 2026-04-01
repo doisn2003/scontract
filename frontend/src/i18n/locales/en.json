@@ -63,6 +63,9 @@
     "success": "Success",
     "cancel": "Cancel",
     "save": "Save",
+    "errors": {
+      "constructor_mismatch": "The number of arguments for the Constructor does not match the contract definition. Please check again."
+    },
     "status": "Status",
     "actions": "Actions"
   },
@@ -97,6 +100,13 @@
         "desc": "View past transactions"
       }
     }
+  },
+  "deploy_gas": {
+    "loading": "Calculating estimated gas fee...",
+    "estimate_failed": "Could not estimate fee",
+    "estimated_fee": "Estimated Gas Fee",
+    "recalculate": "Recalculate",
+    "deployer": "Deployer"
   }
 }
 

@@ -331,7 +331,16 @@ export async function estimateDeployGas(
 
   const provider = new ethers.JsonRpcProvider(rpcUrl);
   const factory = new ethers.ContractFactory(contract.abi as any, contract.bytecode);
-  const deployTx = await factory.getDeployTransaction(...constructorArgs);
+  
+  let deployTx;
+  try {
+    deployTx = await factory.getDeployTransaction(...constructorArgs);
+  } catch (err: any) {
+    if (err.message?.includes('incorrect number of arguments')) {
+      throw new Error('common.errors.constructor_mismatch');
+    }
+    throw err;
+  }
 
   let gasLimit: bigint;
   try {

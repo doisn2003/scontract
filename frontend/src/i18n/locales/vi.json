@@ -62,6 +62,9 @@
     "success": "Thành công",
     "cancel": "Hủy",
     "save": "Lưu",
+    "errors": {
+      "constructor_mismatch": "Số lượng tham số cho Constructor không khớp với định nghĩa trong hợp đồng. Vui lòng kiểm tra lại."
+    },
     "status": "Trạng thái",
     "actions": "Hành động"
   },
@@ -96,6 +99,13 @@
         "desc": "Xem các giao dịch trước đây"
       }
     }
+  },
+  "deploy_gas": {
+    "loading": "Đang tính phí gas ước tính...",
+    "estimate_failed": "Không thể ước tính phí",
+    "estimated_fee": "Phí Gas ước tính",
+    "recalculate": "Tính lại",
+    "deployer": "Người triển khai"
   }
 }
 
