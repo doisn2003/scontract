@@ -1,31 +1,42 @@
 import { Router } from 'express';
 import { auth } from '../middleware/auth.js';
 import {
+  // Project CRUD
   createProject,
-  compileProject,
-  deployProject,
   getProjects,
   getProject,
-  estimateDeployGas,
-  deleteProject,
   updateProject,
+  deleteProject,
+  // Contract Management
+  addContract,
+  updateContract,
+  removeContract,
+  // Pipeline
+  compileContract,
+  deployContract,
+  estimateDeployGas,
 } from '../controllers/projectController.js';
 
 const router = Router();
 
-// All routes require authentication
+// Tất cả routes yêu cầu xác thực
 router.use(auth);
 
-// CRUD
-router.post('/', createProject);           // POST /api/projects
-router.get('/', getProjects);              // GET  /api/projects
-router.get('/:id', getProject);            // GET  /api/projects/:id
-router.patch('/:id', updateProject);        // PATCH /api/projects/:id
-router.delete('/:id', deleteProject);         // DELETE /api/projects/:id
+// ── Project CRUD ──────────────────────────────────────────────────────────
+router.post('/', createProject);                // POST   /api/projects
+router.get('/', getProjects);                   // GET    /api/projects
+router.get('/:id', getProject);                 // GET    /api/projects/:id
+router.patch('/:id', updateProject);             // PATCH  /api/projects/:id  (name/desc)
+router.delete('/:id', deleteProject);            // DELETE /api/projects/:id
 
-// Pipeline
-router.post('/:id/compile', compileProject);                 // POST /api/projects/:id/compile
-router.post('/:id/deploy', deployProject);                   // POST /api/projects/:id/deploy
-router.get('/:id/estimate-deploy', estimateDeployGas);       // GET  /api/projects/:id/estimate-deploy
+// ── Contract Management (IDE Tabs) ────────────────────────────────────────
+router.post('/:id/contracts', addContract);                           // Thêm contract
+router.patch('/:id/contracts/:contractId', updateContract);           // Đổi tên / Sửa source
+router.delete('/:id/contracts/:contractId', removeContract);          // Xóa contract (min 1)
+
+// ── Pipeline per Contract ─────────────────────────────────────────────────
+router.post('/:id/contracts/:contractId/compile', compileContract);                // Compile
+router.post('/:id/contracts/:contractId/deploy', deployContract);                  // Deploy
+router.get('/:id/contracts/:contractId/estimate-deploy', estimateDeployGas);       // Gas estimate
 
 export default router;

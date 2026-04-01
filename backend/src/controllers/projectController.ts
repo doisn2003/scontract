@@ -1,6 +1,6 @@
 /**
  * projectController.ts
- * REST API handlers for the Project CRUD and Compile/Deploy pipeline.
+ * REST API handlers cho Project CRUD và pipeline Compile/Deploy đa hợp đồng.
  */
 
 import type { Request, Response } from 'express';
@@ -8,9 +8,13 @@ import { sendSuccess, sendError } from '../utils/response.js';
 import * as projectService from '../services/projectService.js';
 import type { AuthRequest } from '../types/index.js';
 
+// ──────────────────────────────────────────────────────────
+// PROJECT CRUD
+// ──────────────────────────────────────────────────────────
+
 /**
  * POST /api/projects
- * Create a new project with Solidity source code.
+ * Body: { walletId, name?, description?, contracts: [{ soliditySource, name? }] }
  */
 export const createProject = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -18,31 +22,29 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
     const userId = authReq.user?.id;
     if (!userId) { sendError(res, 'Unauthorized', 401); return; }
 
-    const { walletId, name, description, soliditySource } = req.body as {
+    const { walletId, name, description, contracts } = req.body as {
       walletId: string;
       name?: string;
       description?: string;
-      soliditySource: string;
+      contracts: { soliditySource: string; name?: string }[];
     };
 
-    if (!walletId) {
-      sendError(res, 'walletId is required', 400);
-      return;
+    if (!walletId) { sendError(res, 'walletId is required', 400); return; }
+    if (!contracts || !Array.isArray(contracts) || contracts.length === 0) {
+      sendError(res, 'At least one contract is required', 400); return;
     }
 
-    if (!soliditySource || typeof soliditySource !== 'string') {
-      sendError(res, 'soliditySource is required and must be a string', 400);
-      return;
-    }
-
-    // Basic validation: must contain pragma
-    if (!soliditySource.includes('pragma solidity')) {
-      sendError(res, 'Invalid Solidity source: missing pragma statement', 400);
-      return;
+    for (const c of contracts) {
+      if (!c.soliditySource || typeof c.soliditySource !== 'string') {
+        sendError(res, 'Each contract must have a soliditySource string', 400); return;
+      }
+      if (!c.soliditySource.includes('pragma solidity')) {
+        sendError(res, 'Invalid Solidity source: missing pragma statement', 400); return;
+      }
     }
 
     const project = await projectService.createProject(
-      userId, walletId, name || '', description || '', soliditySource
+      userId, walletId, name || '', description || '', contracts
     );
 
     sendSuccess(res, 'Project created successfully', project, 201);
@@ -52,60 +54,7 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
   }
 };
 
-/**
- * POST /api/projects/:id/compile
- * Compile the Solidity source inside a Docker sandbox.
- */
-export const compileProject = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const authReq = req as AuthRequest;
-    const userId = authReq.user?.id;
-    if (!userId) { sendError(res, 'Unauthorized', 401); return; }
-
-    const projectId = req.params.id as string;
-    if (!projectId) { sendError(res, 'Project ID is required', 400); return; }
-
-    const result = await projectService.compileProject(projectId, userId);
-    sendSuccess(res, 'Compilation successful', result);
-  } catch (error: any) {
-    const message = error.message || 'Compilation failed';
-    const statusCode = message.includes('not found') ? 404 : 400;
-    sendError(res, message, statusCode, error.details);
-  }
-};
-
-/**
- * POST /api/projects/:id/deploy
- * Deploy the compiled contract to BSC Testnet.
- */
-export const deployProject = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const authReq = req as AuthRequest;
-    const userId = authReq.user?.id;
-    if (!userId) { sendError(res, 'Unauthorized', 401); return; }
-
-    const projectId = req.params.id as string;
-    if (!projectId) { sendError(res, 'Project ID is required', 400); return; }
-
-    const { constructorArgs = [] } = req.body as { constructorArgs?: unknown[] };
-
-    const result = await projectService.deployProject(projectId, userId, constructorArgs);
-
-    sendSuccess(res, 'Contract deployed successfully', result);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Deployment failed';
-    const statusCode = message.includes('not found') ? 404
-      : message.includes('Cannot deploy') ? 400
-      : message.includes('insufficient funds') ? 400
-      : 500;
-    sendError(res, message, statusCode);
-  }
-};
-
-/**
- * GET /api/projects
- * List all projects for the authenticated user.
- */
+/** GET /api/projects */
 export const getProjects = async (req: Request, res: Response): Promise<void> => {
   try {
     const authReq = req as AuthRequest;
@@ -120,24 +69,18 @@ export const getProjects = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-/**
- * GET /api/projects/:id
- * Get project detail (including ABI and source).
- */
+/** GET /api/projects/:id */
 export const getProject = async (req: Request, res: Response): Promise<void> => {
   try {
     const authReq = req as AuthRequest;
     const userId = authReq.user?.id;
     if (!userId) { sendError(res, 'Unauthorized', 401); return; }
 
-    const projectId = req.params.id as string;
+    const projectId = req.params['id'] as string;
     if (!projectId) { sendError(res, 'Project ID is required', 400); return; }
 
     const project = await projectService.getProjectById(projectId, userId);
-    if (!project) {
-      sendError(res, 'Project not found', 404);
-      return;
-    }
+    if (!project) { sendError(res, 'Project not found', 404); return; }
 
     sendSuccess(res, 'Project retrieved', project);
   } catch (error) {
@@ -147,9 +90,47 @@ export const getProject = async (req: Request, res: Response): Promise<void> => 
 };
 
 /**
- * GET /api/explore
- * Browse all deployed projects (public — Lộ trình B).
+ * PATCH /api/projects/:id
+ * Cập nhật metadata dùng chung: name, description.
  */
+export const updateProject = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?.id;
+    if (!userId) { sendError(res, 'Unauthorized', 401); return; }
+
+    const projectId = req.params['id'] as string;
+    const updates = req.body as { name?: string; description?: string };
+
+    const project = await projectService.updateProject(projectId, userId, updates);
+    sendSuccess(res, 'Project updated successfully', project);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to update project';
+    const statusCode = message.includes('not found') ? 404 : 500;
+    sendError(res, message, statusCode);
+  }
+};
+
+/** DELETE /api/projects/:id */
+export const deleteProject = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?.id;
+    if (!userId) { sendError(res, 'Unauthorized', 401); return; }
+
+    const projectId = req.params['id'] as string;
+    if (!projectId) { sendError(res, 'Project ID is required', 400); return; }
+
+    await projectService.deleteProject(projectId, userId);
+    sendSuccess(res, 'Project deleted successfully');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to delete project';
+    const statusCode = message.includes('not authorized') || message.includes('not found') ? 404 : 500;
+    sendError(res, message, statusCode);
+  }
+};
+
+/** GET /api/explore */
 export const getExploreProjects = async (_req: Request, res: Response): Promise<void> => {
   try {
     const projects = await projectService.getDeployedProjects();
@@ -160,11 +141,139 @@ export const getExploreProjects = async (_req: Request, res: Response): Promise<
   }
 };
 
+// ──────────────────────────────────────────────────────────
+// CONTRACT MANAGEMENT (thêm / sửa / xóa trong 1 project)
+// ──────────────────────────────────────────────────────────
+
 /**
- * GET /api/projects/:id/estimate-deploy
- * Dry-run gas estimation for deploying a compiled contract.
- * Returns { gasLimit, gasBNB, gasUSD, bnbPrice, deployerAddress }
- * Does NOT broadcast any transaction.
+ * POST /api/projects/:id/contracts
+ * Body: { soliditySource, name? }
+ */
+export const addContract = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?.id;
+    if (!userId) { sendError(res, 'Unauthorized', 401); return; }
+
+    const projectId = req.params['id'] as string;
+    const { soliditySource, name } = req.body as { soliditySource: string; name?: string };
+
+    if (!soliditySource || typeof soliditySource !== 'string') {
+      sendError(res, 'soliditySource is required', 400); return;
+    }
+    if (!soliditySource.includes('pragma solidity')) {
+      sendError(res, 'Invalid Solidity source: missing pragma statement', 400); return;
+    }
+
+    const project = await projectService.addContract(projectId, userId, soliditySource, name);
+    sendSuccess(res, 'Contract added successfully', project, 201);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to add contract';
+    const statusCode = message.includes('not found') ? 404 : 500;
+    sendError(res, message, statusCode);
+  }
+};
+
+/**
+ * PATCH /api/projects/:id/contracts/:contractId
+ * Body: { name?, soliditySource? }
+ */
+export const updateContract = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?.id;
+    if (!userId) { sendError(res, 'Unauthorized', 401); return; }
+
+    const projectId = req.params['id'] as string;
+    const contractId = req.params['contractId'] as string;
+    const updates = req.body as { name?: string; soliditySource?: string };
+
+    const project = await projectService.updateContract(projectId, userId, contractId, updates);
+    sendSuccess(res, 'Contract updated successfully', project);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to update contract';
+    const statusCode = message.includes('not found') ? 404
+      : message.includes('Cannot edit source') ? 400
+      : 500;
+    sendError(res, message, statusCode);
+  }
+};
+
+/**
+ * DELETE /api/projects/:id/contracts/:contractId
+ * Không cho phép xóa contract cuối cùng.
+ */
+export const removeContract = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?.id;
+    if (!userId) { sendError(res, 'Unauthorized', 401); return; }
+
+    const projectId = req.params['id'] as string;
+    const contractId = req.params['contractId'] as string;
+
+    const project = await projectService.removeContract(projectId, userId, contractId);
+    sendSuccess(res, 'Contract removed successfully', project);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to remove contract';
+    const statusCode = message.includes('not found') ? 404
+      : message.includes('last contract') ? 400
+      : 500;
+    sendError(res, message, statusCode);
+  }
+};
+
+// ──────────────────────────────────────────────────────────
+// PIPELINE: Compile / Deploy / Estimate Gas
+// ──────────────────────────────────────────────────────────
+
+/** POST /api/projects/:id/contracts/:contractId/compile */
+export const compileContract = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?.id;
+    if (!userId) { sendError(res, 'Unauthorized', 401); return; }
+
+    const projectId = req.params['id'] as string;
+    const contractId = req.params['contractId'] as string;
+
+    const result = await projectService.compileContract_(projectId, userId, contractId);
+    sendSuccess(res, 'Compilation successful', result);
+  } catch (error: any) {
+    const message = error.message || 'Compilation failed';
+    const statusCode = message.includes('not found') ? 404 : 400;
+    sendError(res, message, statusCode, error.details);
+  }
+};
+
+/**
+ * POST /api/projects/:id/contracts/:contractId/deploy
+ * Body: { constructorArgs?: unknown[] }
+ */
+export const deployContract = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?.id;
+    if (!userId) { sendError(res, 'Unauthorized', 401); return; }
+
+    const projectId = req.params['id'] as string;
+    const contractId = req.params['contractId'] as string;
+    const { constructorArgs = [] } = req.body as { constructorArgs?: unknown[] };
+
+    const result = await projectService.deployContract_(projectId, userId, contractId, constructorArgs);
+    sendSuccess(res, 'Contract deployed successfully', result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Deployment failed';
+    const statusCode = message.includes('not found') ? 404
+      : message.includes('Cannot deploy') ? 400
+      : message.includes('insufficient funds') ? 400
+      : 500;
+    sendError(res, message, statusCode);
+  }
+};
+
+/**
+ * GET /api/projects/:id/contracts/:contractId/estimate-deploy
  */
 export const estimateDeployGas = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -172,12 +281,11 @@ export const estimateDeployGas = async (req: Request, res: Response): Promise<vo
     const userId = authReq.user?.id;
     if (!userId) { sendError(res, 'Unauthorized', 401); return; }
 
-    const projectId = req.params.id as string;
-    if (!projectId) { sendError(res, 'Project ID is required', 400); return; }
-
+    const projectId = req.params['id'] as string;
+    const contractId = req.params['contractId'] as string;
     const { constructorArgs = [] } = req.query as { constructorArgs?: unknown[] };
 
-    const result = await projectService.estimateDeployGas(projectId, userId, constructorArgs);
+    const result = await projectService.estimateDeployGas(projectId, userId, contractId, constructorArgs);
     sendSuccess(res, 'Gas estimate calculated', result);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to estimate gas';
@@ -187,55 +295,3 @@ export const estimateDeployGas = async (req: Request, res: Response): Promise<vo
     sendError(res, message, statusCode);
   }
 };
-
-/**
- * DELETE /api/projects/:id
- * Delete a project (must be owner).
- */
-export const deleteProject = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const authReq = req as AuthRequest;
-    const userId = authReq.user?.id;
-    if (!userId) { sendError(res, 'Unauthorized', 401); return; }
-
-    const projectId = req.params.id as string;
-    if (!projectId) { sendError(res, 'Project ID is required', 400); return; }
-
-    await projectService.deleteProject(projectId, userId);
-
-    sendSuccess(res, 'Project deleted successfully');
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to delete project';
-    const statusCode = message.includes('not authorized') ? 403
-      : message.includes('not found') ? 404
-      : 500;
-    sendError(res, message, statusCode);
-  }
-};
-
-/**
- * PATCH /api/projects/:id
- * Update project details (name, description, soliditySource).
- */
-export const updateProject = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const authReq = req as AuthRequest;
-    const userId = authReq.user?.id;
-    if (!userId) { sendError(res, 'Unauthorized', 401); return; }
-
-    const projectId = req.params.id as string;
-    const updates = req.body as { name?: string; description?: string; soliditySource?: string };
-
-    const project = await projectService.updateProject(projectId, userId, updates);
-
-    sendSuccess(res, 'Project updated successfully', project);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to update project';
-    const statusCode = message.includes('not found') ? 404
-      : message.includes('Cannot edit source') ? 400
-      : 500;
-    sendError(res, message, statusCode);
-  }
-};
-
-

@@ -4,8 +4,8 @@ import { runTests } from '../services/testService.js';
 import type { AuthRequest } from '../types/index.js';
 
 /**
- * POST /api/projects/:id/test
- * Run unit tests inside Docker sandbox.
+ * POST /api/projects/:id/contracts/:contractId/test
+ * Chạy unit test cho 1 contract trong Docker sandbox.
  * Body: { testCode: string, library: 'viem' | 'ethers' }
  */
 export const runProjectTests = async (req: Request, res: Response): Promise<void> => {
@@ -14,8 +14,10 @@ export const runProjectTests = async (req: Request, res: Response): Promise<void
     const userId = authReq.user?.id;
     if (!userId) { sendError(res, 'Unauthorized', 401); return; }
 
-    const projectId = req.params.id as string;
+    const projectId = req.params['id'] as string;
+    const contractId = req.params['contractId'] as string;
     if (!projectId) { sendError(res, 'Project ID is required', 400); return; }
+    if (!contractId) { sendError(res, 'Contract ID is required', 400); return; }
 
     const { testCode, library = 'viem' } = req.body as {
       testCode: string;
@@ -27,7 +29,7 @@ export const runProjectTests = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    const result = await runTests(projectId, userId, testCode, library);
+    const result = await runTests(projectId, userId, contractId, testCode, library);
 
     sendSuccess(res, result.success ? 'Tests passed' : 'Tests completed with failures', result);
   } catch (error) {

@@ -1,6 +1,6 @@
 /**
  * testService.ts
- * Phase 6: Run unit tests inside Docker sandbox.
+ * Run unit tests inside Docker sandbox cho 1 smart contract cụ thể.
  *
  * Flow:
  *   1. createSandbox({mode:'test', testCode, plugin})
@@ -22,41 +22,41 @@ import { parseTestOutput } from '../utils/testResultParser.js';
 export async function runTests(
   projectId: string,
   userId: string,
+  contractId: string,
   testCode: string,
   library: 'viem' | 'ethers' = 'viem'
 ): Promise<SandboxTestResult> {
   const project = await Project.findOne({ _id: projectId, userId });
   if (!project) throw new Error('Project not found');
 
-  if (!project.soliditySource) {
-    throw new Error('No Solidity source code found');
+  const contract = project.contracts.id(contractId);
+  if (!contract) throw new Error('Contract not found in project');
+
+  if (!contract.soliditySource) {
+    throw new Error('No Solidity source code found for this contract');
   }
 
-  console.log(`[testService] Running tests for project ${projectId} (lib: ${library})`);
+  console.log(`[testService] Running tests for project ${projectId}, contract ${contractId} (lib: ${library})`);
 
   let context = null;
   try {
-    // Map library to plugin name
     const plugin = library === 'viem' ? 'viem' as const : 'toolbox' as const;
 
-    context = await createSandbox(project.soliditySource, {
+    context = await createSandbox(contract.soliditySource, {
       mode: 'test',
       testCode,
       plugin,
     });
 
-    // Run: npx hardhat test with 60s timeout (sandbox already has 120s)
     const { stdout, stderr } = await runContainer(
       context.sandboxPath,
       'npx hardhat test --config /app/project/hardhat.config.js',
       {},
-      false // no network needed — runs on Hardhat local node
+      false
     );
 
-    // First try structured result file
     let result = collectTestResult(context.sandboxPath);
 
-    // If no structured result, parse from Mocha stdout
     if (!result.tests || result.tests.length === 0) {
       const parsed = parseTestOutput(stdout + '\n' + stderr);
       if (parsed.tests.length > 0) {
@@ -67,7 +67,6 @@ export async function runTests(
           rawOutput: stdout.substring(0, 5000),
         };
       } else if (!result.error) {
-        // No result at all — provide raw output
         result = {
           success: false,
           rawOutput: (stdout + '\n' + stderr).substring(0, 5000),

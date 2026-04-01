@@ -56,23 +56,38 @@ export interface IWallet extends Document {
   createdAt: Date;
 }
 
+// ========================
+// Smart Contract (sub-document of Project)
+// ========================
+export interface ISmartContract extends Document {
+  _id: Types.ObjectId;
+  name: string;
+  soliditySource: string;
+  abi: Record<string, unknown>[] | null;
+  bytecode: string | null;
+  contractAddress: string | null;
+  solidityVersion: string | null;
+  status: ProjectStatus;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+
+// ========================
+// Project
+// ========================
 export interface IProject extends Document {
   _id: Types.ObjectId;
   userId: Types.ObjectId;
   walletId: Types.ObjectId;
   name: string;
-  contractName: string;
   description: string;
-  soliditySource: string;
-  abi: Record<string, unknown>[];
-  bytecode: string;
-  contractAddress: string;
-  solidityVersion: string;
-  status: ProjectStatus;
   network: string;
+  contracts: Types.DocumentArray<ISmartContract>;
   createdAt: Date;
   updatedAt: Date;
 }
+
 
 export interface IFaucetLog extends Document {
   _id: Types.ObjectId;
@@ -86,6 +101,7 @@ export interface IFaucetLog extends Document {
 export interface ITransaction extends Document {
   _id: Types.ObjectId;
   projectId: Types.ObjectId;
+  contractId: Types.ObjectId | null;
   userId: Types.ObjectId;
   txHash: string;
   functionName: string;

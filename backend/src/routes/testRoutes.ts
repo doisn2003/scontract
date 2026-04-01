@@ -6,7 +6,7 @@ const router = Router();
 
 router.use(auth);
 
-// POST /api/tests/:id — Run tests for a project
-router.post('/:id', runProjectTests);
+// POST /api/tests/:id/contracts/:contractId — Run tests for a specific contract
+router.post('/:id/contracts/:contractId', runProjectTests);
 
 export default router;
