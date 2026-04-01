@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, Navigate } from 'react-router-dom';
 import { ethers } from 'ethers';
 import {
   HiOutlineArrowPath,
@@ -36,7 +36,7 @@ export default function InteractPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabKey>('read');
 
-  const activeContract = project?.contracts?.find(c => c._id === contractId);
+  const activeContract = project?.contracts?.find(c => c._id === contractId) || project?.contracts?.[0];
   const contractAddress = activeContract?.contractAddress;
   const abi = activeContract?.abi;
 
@@ -179,7 +179,16 @@ export default function InteractPage() {
     );
   }
 
-  if (!project || !activeContract || !abi || !contractAddress) {
+  if (!project || project.contracts.length === 0) {
+    return <Navigate to="/projects" replace />;
+  }
+
+  // If contractId is missing or invalid, redirect to the first one
+  if (!contractId && project.contracts.length > 0) {
+    return <Navigate to={`/projects/${id}/contracts/${project.contracts[0]._id}/interact`} replace />;
+  }
+
+  if (!activeContract || !abi || !contractAddress) {
     return (
       <PageWrapper title="Not Available">
         <div className="card" style={{ textAlign: 'center', padding: 'var(--space-16)' }}>

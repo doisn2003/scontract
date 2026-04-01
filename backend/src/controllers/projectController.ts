@@ -320,3 +320,29 @@ export const estimateDeployGas = async (req: Request, res: Response): Promise<vo
     }
   }
 };
+
+/**
+ * PUT /api/projects/:id/contracts/reorder
+ * Body: { contractIds: string[] }
+ */
+export const reorderContracts = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?.id;
+    if (!userId) { sendError(res, 'Unauthorized', 401); return; }
+
+    const projectId = req.params['id'] as string;
+    const { contractIds } = req.body as { contractIds: string[] };
+
+    if (!contractIds || !Array.isArray(contractIds)) {
+      sendError(res, 'contractIds array is required', 400); return;
+    }
+
+    const project = await projectService.reorderContracts(projectId, userId, contractIds);
+    sendSuccess(res, 'Contracts reordered', project);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to reorder contracts';
+    const statusCode = message.includes('not found') ? 404 : 500;
+    sendError(res, message, statusCode);
+  }
+};

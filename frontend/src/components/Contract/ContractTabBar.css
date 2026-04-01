@@ -32,6 +32,22 @@
   max-width: 200px;
   z-index: 1;
   margin-bottom: -2px; /* Pull tab down to overlap the bar's border */
+  user-select: none;
+}
+
+.contract-tab[draggable="true"] {
+  cursor: grab;
+}
+
+.contract-tab[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.contract-tab.dragging {
+  opacity: 0.5;
+  border: 1px dashed var(--color-accent);
+  background: var(--color-bg-input);
+  transform: scale(0.98);
 }
 
 .contract-tab:hover {

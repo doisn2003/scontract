@@ -15,6 +15,7 @@ import {
   compileContract,
   deployContract,
   estimateDeployGas,
+  reorderContracts,
 } from '../controllers/projectController.js';
 
 const router = Router();
@@ -33,6 +34,7 @@ router.delete('/:id', deleteProject);            // DELETE /api/projects/:id
 router.post('/:id/contracts', addContract);                           // Thêm contract
 router.patch('/:id/contracts/:contractId', updateContract);           // Đổi tên / Sửa source
 router.delete('/:id/contracts/:contractId', removeContract);          // Xóa contract (min 1)
+router.put('/:id/contracts/reorder', reorderContracts);               // Sắp xếp lại thứ tự tab
 
 // ── Pipeline per Contract ─────────────────────────────────────────────────
 router.post('/:id/contracts/:contractId/compile', compileContract);                // Compile

@@ -18,6 +18,7 @@ interface ExploreProject {
   name: string;
   description?: string;
   contracts: {
+    _id: string;
     name: string;
     contractAddress: string | null;
     status: string;

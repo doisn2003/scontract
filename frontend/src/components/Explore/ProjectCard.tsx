@@ -8,6 +8,7 @@ interface ProjectCardProps {
     name: string;
     description?: string;
     contracts: {
+      _id: string;
       name: string;
       contractAddress: string | null;
       status: string;
@@ -70,7 +71,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
             </a>
           )}
           <Link
-            to={`/projects/${project._id}/interact`}
+            to={`/projects/${project._id}/contracts/${project.contracts[0]?._id}/interact`}
             className="btn btn-secondary btn-sm"
             onClick={handleLinkClick}
           >

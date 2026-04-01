@@ -14,6 +14,7 @@ interface ContractTabBarProps {
   onAddContract: () => void;
   onRemoveContract: (id: string) => void;
   onRenameContract: (id: string, newName: string) => void;
+  onReorderContracts: (ids: string[]) => void;
   isOwner: boolean;
 }
 
@@ -24,10 +25,12 @@ export default function ContractTabBar({
   onAddContract,
   onRemoveContract,
   onRenameContract,
+  onReorderContracts,
   isOwner
 }: ContractTabBarProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   const handleStartRename = (id: string, currentName: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -51,13 +54,43 @@ export default function ContractTabBar({
     }
   };
 
+  // ─── Drag & Drop Handlers ───
+  const handleDragStart = (index: number) => {
+    if (!isOwner) return;
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault(); // Required to allow drop
+    if (!isOwner) return;
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (index: number) => {
+    if (!isOwner || draggedIndex === null || draggedIndex === index) {
+      setDraggedIndex(null);
+      return;
+    }
+
+    const newContracts = [...contracts];
+    const [movedItem] = newContracts.splice(draggedIndex, 1);
+    newContracts.splice(index, 0, movedItem);
+
+    onReorderContracts(newContracts.map(c => c._id));
+    setDraggedIndex(null);
+  };
+
   return (
     <div className="contract-tab-bar">
       <div className="tabs-container">
-        {contracts.map((contract) => (
+        {contracts.map((contract, index) => (
           <div
             key={contract._id}
-            className={`contract-tab ${activeId === contract._id ? 'active' : ''}`}
+            draggable={isOwner && editingId !== contract._id}
+            onDragStart={() => handleDragStart(index)}
+            onDragOver={handleDragOver}
+            onDrop={() => handleDrop(index)}
+            className={`contract-tab ${activeId === contract._id ? 'active' : ''} ${draggedIndex === index ? 'dragging' : ''}`}
             onClick={() => onTabChange(contract._id)}
           >
             {editingId === contract._id ? (

@@ -418,3 +418,25 @@ export async function updateProject(
   await project.save();
   return project;
 }
+
+export async function reorderContracts(projectId: string, userId: string, contractIds: string[]) {
+  const project = await Project.findOne({ _id: projectId, userId });
+  if (!project) throw new Error('Project not found');
+
+  if (contractIds.length !== project.contracts.length) {
+    throw new Error('Invalid number of contracts provided for reordering');
+  }
+
+  // Sắp xếp lại dựa trên mảng IDs nhận được
+  const reordered = contractIds.map(id => {
+    const c = project.contracts.id(id);
+    if (!c) throw new Error(`Contract ${id} not found in project`);
+    return c;
+  });
+
+  // Gán lại mảng (Mongoose subdoc array)
+  project.contracts = reordered as any;
+  await project.save();
+  
+  return project;
+}

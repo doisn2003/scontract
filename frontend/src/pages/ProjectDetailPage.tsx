@@ -128,6 +128,20 @@ export default function ProjectDetailPage() {
     }
   };
 
+  const handleReorderContracts = async (contractIds: string[]) => {
+    if (!id) return;
+    try {
+      const { data } = await api.put<ApiResponse<Project>>(`/projects/${id}/contracts/reorder`, {
+        contractIds
+      });
+      if (data.success && data.data) {
+        setProject(data.data);
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to sync reorder');
+    }
+  };
+
   if (isLoading) {
     return (
       <PageWrapper title="Project">
@@ -214,6 +228,7 @@ export default function ProjectDetailPage() {
           onAddContract={handleAddContract}
           onRemoveContract={handleRemoveContract}
           onRenameContract={handleRenameContract}
+          onReorderContracts={handleReorderContracts}
           isOwner={isOwner}
         />
 
