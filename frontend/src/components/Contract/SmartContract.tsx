@@ -9,6 +9,8 @@ import {
   HiOutlineChevronRight,
   HiOutlineExclamationTriangle,
   HiOutlineCpuChip,
+  HiOutlineArrowDownTray,
+  HiOutlineCheck,
 } from 'react-icons/hi2';
 import toast from 'react-hot-toast';
 import { ethers } from 'ethers';
@@ -47,6 +49,8 @@ export default function SmartContract({
   const [showArgErrors, setShowArgErrors] = useState(false);
   const [sourceCode, setSourceCode] = useState(contract.soliditySource);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
     setSourceCode(contract.soliditySource);
@@ -167,6 +171,8 @@ export default function SmartContract({
   const handleArgChange = (name: string, value: string) => {
     setConstructorArgs(prev => ({ ...prev, [name]: value }));
     setShowArgErrors(false);
+    setIsSaved(false);
+    setHasChanges(true);
   };
 
   const handleApplyToSource = async () => {
@@ -202,8 +208,9 @@ export default function SmartContract({
     setSourceCode(newSource);
     const success = await handleUpdateSource(newSource);
     if (success) {
-      toast.success(replacedCount > 0 ? 'Dependencies Injected & Re-compiling...' : 'Source Optimized & Re-compiling...');
-      handleCompile();
+      toast.success(replacedCount > 0 ? 'Dependencies Injected into Source Code' : 'Source Optimized');
+      setIsSaved(true);
+      setHasChanges(false);
     }
   };
 
@@ -306,8 +313,8 @@ export default function SmartContract({
               <h4>Constructor Arguments Required</h4>
               <p>Please provide the dependencies below before deploying.</p>
             </div>
-            <button className="btn-sm btn-recompile-source" onClick={handleApplyToSource} disabled={isSaving || isCompiling}>
-              <HiOutlineCpuChip /> {isSaving ? 'Saving...' : 'Re-compile'}
+            <button className="btn-sm btn-recompile-source" onClick={handleApplyToSource} disabled={isSaving || isSaved || !hasChanges}>
+              {isSaved ? <HiOutlineCheck /> : <HiOutlineArrowDownTray />} {isSaving ? 'Saving...' : isSaved ? 'Saved' : 'Save'}
             </button>
           </div>
           <div className="constructor-grid">
