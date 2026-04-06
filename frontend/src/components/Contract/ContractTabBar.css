@@ -1,13 +1,17 @@
 .contract-tab-bar {
-  display: flex;
-  align-items: center;
   border-bottom: 2px solid var(--color-border);
   margin-bottom: var(--space-6);
   background: var(--color-bg-card);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   padding: 0 var(--space-4);
   overflow-x: auto;
-  scrollbar-width: thin;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.contract-tab-bar::-webkit-scrollbar {
+  display: none;
 }
 
 .tabs-container {

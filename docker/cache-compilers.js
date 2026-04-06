@@ -16,12 +16,18 @@ const os = require('os');
 
 // Versions to pre-cache — covers most common use cases
 const VERSIONS_TO_CACHE = [
-  '0.8.28', // latest 0.8.x (for Lock.sol)
-  '0.8.20', // widely used stable
+  '0.8.28',
+  '0.8.26',
+  '0.8.25',
+  '0.8.24',
+  '0.8.20',
   '0.8.19',
   '0.8.17',
+  '0.8.15',
   '0.8.0',
-  '0.7.6',  // legacy support
+  '0.7.6',
+  '0.6.12',
+  '0.5.16',
 ];
 
 function createMinimalProject(tmpDir, version) {

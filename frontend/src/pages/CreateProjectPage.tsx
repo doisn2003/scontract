@@ -37,7 +37,7 @@ export default function CreateProjectPage() {
         if (data.data.length > 0) setWalletId(data.data[0]._id);
       }
     } catch {
-      toast.error('Failed to load wallets');
+      toast.error(t('pages.projects.create.messages.load_wallets_failed'));
     } finally {
       setWalletsLoading(false);
     }
@@ -49,11 +49,11 @@ export default function CreateProjectPage() {
   const handleFileSelect = (files: FileList) => {
     Array.from(files).forEach(file => {
       if (!file.name.endsWith('.sol')) {
-        toast.error(`${file.name} is not a Solidity file`);
+        toast.error(t('pages.projects.create.messages.invalid_file', { name: file.name }));
         return;
       }
       if (file.size > 500 * 1024) {
-        toast.error(`${file.name} is too large (max 500KB)`);
+        toast.error(t('pages.projects.create.messages.file_too_large', { name: file.name }));
         return;
       }
 
@@ -72,7 +72,7 @@ export default function CreateProjectPage() {
         if (!name) {
           setName(file.name.replace('.sol', ' Project'));
         }
-        toast.success(`Loaded ${file.name}`);
+        toast.success(t('pages.projects.create.messages.file_loaded', { name: file.name }));
       };
       reader.readAsText(file);
     });
@@ -116,18 +116,18 @@ export default function CreateProjectPage() {
     e.preventDefault();
 
     if (!walletId) {
-      toast.error('Please select a wallet');
+      toast.error(t('pages.projects.create.messages.select_wallet'));
       return;
     }
     if (contracts.length === 0) {
-      toast.error('Please add at least one Solidity contract');
+      toast.error(t('pages.projects.create.messages.add_contract'));
       return;
     }
     
     // Simple validation
     for (const c of contracts) {
       if (!c.soliditySource.includes('pragma solidity')) {
-        toast.error(`Invalid Solidity in ${c.name}: missing pragma statement`);
+        toast.error(t('pages.projects.create.messages.invalid_solidity', { name: c.name }));
         return;
       }
     }
@@ -136,7 +136,7 @@ export default function CreateProjectPage() {
     try {
       const { data } = await api.post<ApiResponse<Project>>('/projects', {
         walletId,
-        name: name || 'Untitled Project',
+        name: name || t('pages.projects.create.untitled_project'),
         description,
         contracts: contracts.map(c => ({
           name: c.name,
@@ -145,11 +145,11 @@ export default function CreateProjectPage() {
       });
 
       if (data.success && data.data) {
-        toast.success('Project created!');
+        toast.success(t('pages.projects.create.messages.project_created'));
         navigate(`/projects/${data.data._id}`);
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Failed to create project';
+      const msg = err?.response?.data?.message || t('pages.projects.create.messages.create_project_failed');
       toast.error(msg);
     } finally {
       setIsSubmitting(false);
@@ -163,13 +163,13 @@ export default function CreateProjectPage() {
         <div className="form-section">
           <label className="input-label">
             <HiOutlineWallet style={{ verticalAlign: 'middle', marginRight: 6 }} />
-            Deployer Wallet
+            {t('pages.projects.create.deployer_wallet')}
           </label>
           {walletsLoading ? (
             <div className="skeleton" style={{ height: 44 }} />
           ) : wallets.length === 0 ? (
             <div className="form-warning">
-              ⚠️ No wallets found. <a href="/wallets">Create one first</a>
+              ⚠️ {t('pages.projects.create.no_wallets_found')} <a href="/wallets">{t('pages.projects.create.create_one_first')}</a>
             </div>
           ) : (
             <select
@@ -189,22 +189,22 @@ export default function CreateProjectPage() {
         {/* Project Info */}
         <div className="form-row">
           <div className="form-section" style={{ flex: 1 }}>
-            <label className="input-label">Project Name</label>
+            <label className="input-label">{t('pages.projects.create.project_name')}</label>
             <input
               className="input"
               type="text"
-              placeholder="e.g., MyToken"
+              placeholder={t('pages.projects.create.project_name_placeholder')}
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={100}
             />
           </div>
           <div className="form-section" style={{ flex: 2 }}>
-            <label className="input-label">Description (optional)</label>
+            <label className="input-label">{t('pages.projects.create.description')}</label>
             <input
               className="input"
               type="text"
-              placeholder="Brief description of your contract"
+              placeholder={t('pages.projects.create.description_placeholder')}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               maxLength={500}
@@ -216,7 +216,7 @@ export default function CreateProjectPage() {
         <div className="form-section">
           <label className="input-label">
             <HiOutlineCodeBracket style={{ verticalAlign: 'middle', marginRight: 6 }} />
-            Solidity Contracts
+            {t('pages.projects.create.solidity_contracts')}
           </label>
 
           <div
@@ -237,8 +237,8 @@ export default function CreateProjectPage() {
             />
             <div className="drop-zone-empty">
               <HiOutlineDocumentArrowUp className="drop-zone-icon" />
-              <span className="drop-zone-text">Drop <strong>.sol</strong> files here</span>
-              <span className="drop-zone-hint">or click to browse multiple</span>
+              <div className="drop-zone-text" dangerouslySetInnerHTML={{ __html: t('pages.projects.create.drop_files') }} />
+              <span className="drop-zone-hint">{t('pages.projects.create.browse_multiple')}</span>
             </div>
           </div>
         </div>
@@ -273,7 +273,7 @@ export default function CreateProjectPage() {
                   setActiveContractId(id);
                 }}
               >
-                <HiOutlinePlusCircle /> Add More
+                <HiOutlinePlusCircle /> {t('pages.projects.create.add_more')}
               </button>
             </div>
 
@@ -285,10 +285,10 @@ export default function CreateProjectPage() {
                       className="contract-name-input"
                       value={contracts.find(c => c.id === activeContractId)?.name || ''}
                       onChange={(e) => handleUpdateActiveName(e.target.value)}
-                      placeholder="Contract Name"
+                      placeholder={t('pages.projects.create.contract_name')}
                     />
                     <span className="char-count">
-                      ({contracts.find(c => c.id === activeContractId)?.soliditySource.length || 0} chars)
+                      ({contracts.find(c => c.id === activeContractId)?.soliditySource.length || 0} {t('pages.projects.create.chars')})
                     </span>
                   </div>
                   <textarea
@@ -316,7 +316,7 @@ export default function CreateProjectPage() {
                 setActiveContractId(id);
               }}
             >
-              <HiOutlinePlusCircle /> Or start with a blank contract
+              <HiOutlinePlusCircle /> {t('pages.projects.create.start_blank')}
             </button>
           </div>
         )}
@@ -328,7 +328,7 @@ export default function CreateProjectPage() {
             className="btn btn-secondary"
             onClick={() => navigate('/projects')}
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
@@ -336,9 +336,9 @@ export default function CreateProjectPage() {
             disabled={isSubmitting || contracts.length === 0 || !walletId}
           >
             {isSubmitting ? (
-              <><span className="spinner" /> Creating...</>
+              <><span className="spinner" /> {t('pages.projects.create.creating')}</>
             ) : (
-              <><HiOutlinePlusCircle /> Create Project</>
+              <><HiOutlinePlusCircle /> {t('pages.projects.create.create_project')}</>
             )}
           </button>
         </div>

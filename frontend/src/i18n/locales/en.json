@@ -5,7 +5,32 @@
     },
     "wallets": {
       "title": "Wallets",
-      "subtitle": "Manage your Web3 wallets — create, fund, and import into MetaMask"
+      "subtitle": "Manage your Web3 wallets — create, fund, and import into MetaMask",
+      "count_one": "{{count}} wallet",
+      "count_other": "{{count}} wallets",
+      "new_wallet": "New Wallet",
+      "create_wallet": "Create Wallet",
+      "no_wallets": "No wallets yet",
+      "no_wallets_desc": "Create your first wallet to get started with smart contract testing.",
+      "copy_address": "Copy address",
+      "check_balance": "Check Balance",
+      "private_key": "Private Key",
+      "view_private_key": "View Private Key",
+      "create_modal_title": "Create New Wallet",
+      "create_modal_desc": "A new wallet with a random private key will be generated. You can import it into MetaMask later.",
+      "label": "Wallet Label",
+      "label_placeholder": "e.g., Testing Wallet",
+      "generated_pk_warning": "Never share your private key! Anyone with this key has full control of this wallet. Copy this key and import it into MetaMask to sign transactions.",
+      "copy_key": "Copy Key",
+      "close": "Close",
+      "messages": {
+        "load_failed": "Failed to load wallets",
+        "fetch_balance_failed": "Failed to fetch balance",
+        "create_success": "Wallet created successfully!",
+        "create_failed": "Failed to create wallet",
+        "pk_retrieve_failed": "Failed to retrieve private key",
+        "copied_success": "{{label}} copied!"
+      }
     },
     "projects": {
       "list": {
@@ -14,7 +39,35 @@
       },
       "create": {
         "title": "New Project",
-        "subtitle": "Upload a Solidity file to compile & deploy"
+        "subtitle": "Upload a Solidity file to compile & deploy",
+        "untitled_project": "Untitled Project",
+        "deployer_wallet": "Deployer Wallet",
+        "no_wallets_found": "No wallets found.",
+        "create_one_first": "Create one first",
+        "project_name": "Project Name",
+        "project_name_placeholder": "e.g., MyToken",
+        "description": "Description (optional)",
+        "description_placeholder": "Brief description of your contract",
+        "solidity_contracts": "Solidity Contracts",
+        "drop_files": "Drop .sol files here",
+        "browse_multiple": "or click to browse multiple",
+        "add_more": "Add More",
+        "contract_name": "Contract Name",
+        "chars": "chars",
+        "start_blank": "Or start with a blank contract",
+        "creating": "Creating...",
+        "create_project": "Create Project",
+        "messages": {
+          "load_wallets_failed": "Failed to load wallets",
+          "invalid_file": "{{name}} is not a Solidity file",
+          "file_too_large": "{{name}} is too large (max 500KB)",
+          "file_loaded": "Loaded {{name}}",
+          "select_wallet": "Please select a wallet",
+          "add_contract": "Please add at least one Solidity contract",
+          "invalid_solidity": "Invalid Solidity in {{name}}: missing pragma statement",
+          "project_created": "Project created!",
+          "create_project_failed": "Failed to create project"
+        }
       },
       "detail": {
         "subtitle_fallback": "Smart contract project"
