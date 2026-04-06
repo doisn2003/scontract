@@ -15,6 +15,12 @@ const transactionSchema = new Schema<ITransaction>(
       required: [true, 'User ID is required'],
       index: true,
     },
+    contractId: {
+      type: Schema.Types.ObjectId,
+      default: null,
+    },
+
+
     txHash: {
       type: String,
       required: [true, 'Transaction hash is required'],

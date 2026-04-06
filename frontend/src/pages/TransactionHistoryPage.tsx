@@ -18,10 +18,10 @@ import './TransactionHistoryPage.css';
 
 interface TransactionWithProject extends Omit<Transaction, 'projectId'> {
   projectId: {
-    _id?: string;
-    name?: string;
-    network?: string;
-    contractAddress?: string;
+    _id: string;
+    name: string;
+    network: string;
+    contracts: { _id: string; name: string }[];
   } | string;
 }
 
@@ -44,9 +44,18 @@ function getProjectId(tx: TransactionWithProject): string {
 
 function getProjectName(tx: TransactionWithProject): string {
   if (typeof tx.projectId === 'object' && tx.projectId !== null) {
-    return (tx.projectId as any).name || 'Unknown Project';
+    return tx.projectId.name || 'Unknown Project';
   }
   return 'Unknown Project';
+}
+
+function getContractName(tx: TransactionWithProject): string {
+  if (!tx.contractId) return '—';
+  if (typeof tx.projectId === 'object' && tx.projectId !== null && tx.projectId.contracts) {
+    const contract = tx.projectId.contracts.find(c => c._id === tx.contractId);
+    return contract?.name || 'Deleted Contract';
+  }
+  return '—';
 }
 
 export default function TransactionHistoryPage() {
@@ -123,6 +132,7 @@ export default function TransactionHistoryPage() {
                   <tr>
                     <th>Thời gian</th>
                     <th>Project</th>
+                    <th>Contract</th>
                     <th>Function</th>
                     <th>Tx Hash</th>
                     <th>Gas (BNB)</th>
@@ -135,16 +145,24 @@ export default function TransactionHistoryPage() {
                   {data.transactions.map((tx) => {
                     const projectId = getProjectId(tx);
                     const projectName = getProjectName(tx);
+                    const contractName = getContractName(tx);
+                    const interactUrl = tx.contractId 
+                      ? `/projects/${projectId}/contracts/${tx.contractId}/interact`
+                      : `/projects/${projectId}/interact`;
+
                     return (
                       <tr
                         key={tx._id}
                         className="tx-row"
-                        onClick={() => projectId && navigate(`/projects/${projectId}/interact`)}
-                        title="Click để đến trang Interact của project này"
+                        onClick={() => projectId && navigate(interactUrl)}
+                        title="Click để đến trang Interact của hợp đồng này"
                       >
                         <td className="tx-cell tx-time">{formatDate(tx.createdAt)}</td>
                         <td className="tx-cell">
                           <span className="tx-project-name">{projectName}</span>
+                        </td>
+                        <td className="tx-cell">
+                          <span className="tx-contract-name">{contractName}</span>
                         </td>
                         <td className="tx-cell">
                           <span className={`tx-fn-name mono ${tx.functionName === '__deploy__' ? 'deploy' : ''}`}>

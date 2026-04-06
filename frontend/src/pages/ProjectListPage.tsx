@@ -94,7 +94,23 @@ export default function ProjectListPage() {
         ) : (
           <div className="projects-grid">
             {projects.map((project) => {
-              const statusCfg = STATUS_CONFIG[project.status];
+              // Derive project-level status from its contracts
+              let derivedStatus: ProjectStatus = 'created';
+              const hasDeployed = project.contracts?.some(c => c.status === 'deployed');
+              const allCompiled = project.contracts?.every(c => c.status === 'compiled' || c.status === 'deployed');
+              
+              if (hasDeployed) derivedStatus = 'deployed';
+              else if (allCompiled && project.contracts?.length > 0) derivedStatus = 'compiled';
+              
+              const statusCfg = STATUS_CONFIG[derivedStatus];
+              
+              // Find first deployed address to show on card if exists
+              const firstDeployedContract = project.contracts?.find(c => c.status === 'deployed');
+              const displayAddress = firstDeployedContract?.contractAddress;
+
+              // Collect unique solidity versions
+              const versions = Array.from(new Set(project.contracts?.map(c => c.solidityVersion).filter(Boolean)));
+
               return (
                 <div
                   key={project._id}
@@ -124,9 +140,12 @@ export default function ProjectListPage() {
                   )}
 
                   <div className="project-card-meta">
-                    {project.solidityVersion && (
+                    <span className="project-meta-item">
+                      <HiOutlineFolder /> {project.contracts?.length || 0} Contract(s)
+                    </span>
+                    {versions.length > 0 && (
                       <span className="project-meta-item">
-                        <HiOutlineCodeBracket /> Solidity {project.solidityVersion}
+                        <HiOutlineCodeBracket /> {versions.join(', ')}
                       </span>
                     )}
                     <span className="project-meta-item">
@@ -134,10 +153,10 @@ export default function ProjectListPage() {
                     </span>
                   </div>
 
-                  {project.contractAddress && (
+                  {displayAddress && (
                     <div className="project-card-address mono">
                       <HiOutlineRocketLaunch />
-                      {project.contractAddress.slice(0, 10)}...{project.contractAddress.slice(-8)}
+                      {displayAddress.slice(0, 10)}...{displayAddress.slice(-8)}
                     </div>
                   )}
 

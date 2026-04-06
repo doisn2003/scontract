@@ -1,8 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
+// Components
+import Grainient from './components/Common/Grainient/Grainient';
+
 // Context
 import { AuthProvider } from './context/AuthContext';
+// ... (rest of imports unchanged but I need to be careful with line numbers)
 
 // Layout
 import Navbar from './components/Layout/Navbar';
@@ -88,8 +92,8 @@ function AppRoutes() {
       <Route path="/projects/create" element={<ProtectedPage><CreateProjectPage /></ProtectedPage>} />
       <Route path="/projects" element={<ProtectedPage><ProjectListPage /></ProtectedPage>} />
       <Route path="/projects/:id" element={<ProtectedPage><ProjectDetailPage /></ProtectedPage>} />
-      <Route path="/projects/:id/interact" element={<ProtectedPage><InteractPage /></ProtectedPage>} />
-      <Route path="/projects/:id/test" element={<ProtectedPage><TestPage /></ProtectedPage>} />
+      <Route path="/projects/:id/contracts/:contractId/interact" element={<ProtectedPage><InteractPage /></ProtectedPage>} />
+      <Route path="/projects/:id/contracts/:contractId/test" element={<ProtectedPage><TestPage /></ProtectedPage>} />
       <Route path="/explore" element={<ProtectedPage><ExplorePage /></ProtectedPage>} />
       <Route path="/transactions" element={<ProtectedPage><TransactionHistoryPage /></ProtectedPage>} />
 
@@ -103,6 +107,32 @@ function AppRoutes() {
 function App() {
   return (
     <BrowserRouter>
+      <div className="app-main-background">
+        <Grainient
+          color1="#3d483c"
+          color2="#000000"
+          color3="#43527f"
+          timeSpeed={0.15}
+          colorBalance={0.01}
+          warpStrength={1}
+          warpFrequency={5}
+          warpSpeed={2}
+          warpAmplitude={50}
+          blendAngle={0}
+          blendSoftness={0.05}
+          rotationAmount={500}
+          noiseScale={2}
+          grainAmount={0.1}
+          grainScale={2}
+          grainAnimated={false}
+          contrast={1.5}
+          gamma={1}
+          saturation={1}
+          centerX={0}
+          centerY={0}
+          zoom={0.9}
+        />
+      </div>
       <AuthProvider>
         <Toaster
           position="top-right"

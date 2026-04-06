@@ -62,6 +62,7 @@ async function calculateGasCost(gasUsed: number): Promise<{
 
 export interface CreateTransactionPayload {
   projectId: string;
+  contractId?: string | null;
   userId: string;
   txHash: string;
   functionName: string;
@@ -73,6 +74,7 @@ export interface CreateTransactionPayload {
 export async function createTransaction(payload: CreateTransactionPayload) {
   const {
     projectId,
+    contractId = null,
     userId,
     txHash,
     functionName,
@@ -85,6 +87,7 @@ export async function createTransaction(payload: CreateTransactionPayload) {
 
   const tx = await Transaction.create({
     projectId,
+    contractId,
     userId,
     txHash,
     functionName,
@@ -118,7 +121,7 @@ export async function getTransactions(opts: GetTransactionsOptions) {
 
   const [transactions, total] = await Promise.all([
     Transaction.find(filter)
-      .populate('projectId', 'name network contractAddress')
+      .populate('projectId', 'name network contractAddress contracts')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HiOutlineHandRaised } from 'react-icons/hi2';
+import { FaFaucetDrip } from 'react-icons/fa6';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import type { ApiResponse } from '../../types';
@@ -39,7 +39,7 @@ export default function FaucetButton({ address, onSuccess }: FaucetButtonProps) 
         <span className="spinner-sm" />
       ) : (
         <>
-          <HiOutlineHandRaised />
+          <FaFaucetDrip />
           <span>Faucet</span>
         </>
       )}

@@ -6,6 +6,7 @@ import {
   HiOutlineDocumentArrowUp,
   HiOutlineWallet,
   HiOutlinePlusCircle,
+  HiOutlineXMark,
 } from 'react-icons/hi2';
 import toast from 'react-hot-toast';
 import PageWrapper from '../components/Layout/PageWrapper';
@@ -23,8 +24,8 @@ export default function CreateProjectPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [walletId, setWalletId] = useState('');
-  const [soliditySource, setSoliditySource] = useState('');
-  const [fileName, setFileName] = useState('');
+  const [contracts, setContracts] = useState<{ id: string; name: string; soliditySource: string }[]>([]);
+  const [activeContractId, setActiveContractId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch wallets
@@ -36,7 +37,7 @@ export default function CreateProjectPage() {
         if (data.data.length > 0) setWalletId(data.data[0]._id);
       }
     } catch {
-      toast.error('Failed to load wallets');
+      toast.error(t('pages.projects.create.messages.load_wallets_failed'));
     } finally {
       setWalletsLoading(false);
     }
@@ -45,35 +46,64 @@ export default function CreateProjectPage() {
   useEffect(() => { fetchWallets(); }, [fetchWallets]);
 
   // File drop/upload handler
-  const handleFileSelect = (file: File) => {
-    if (!file.name.endsWith('.sol')) {
-      toast.error('Please select a .sol (Solidity) file');
-      return;
-    }
-    if (file.size > 500 * 1024) {
-      toast.error('File too large (max 500KB)');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target?.result as string;
-      setSoliditySource(content);
-      setFileName(file.name);
-      // Auto-fill name from filename if empty
-      if (!name) {
-        setName(file.name.replace('.sol', ''));
+  const handleFileSelect = (files: FileList) => {
+    Array.from(files).forEach(file => {
+      if (!file.name.endsWith('.sol')) {
+        toast.error(t('pages.projects.create.messages.invalid_file', { name: file.name }));
+        return;
       }
-      toast.success(`Loaded ${file.name}`);
-    };
-    reader.readAsText(file);
+      if (file.size > 500 * 1024) {
+        toast.error(t('pages.projects.create.messages.file_too_large', { name: file.name }));
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        const newContract = {
+          id: Math.random().toString(36).substring(2, 9),
+          name: file.name.replace('.sol', ''),
+          soliditySource: content
+        };
+        setContracts(prev => [...prev, newContract]);
+        setActiveContractId(newContract.id);
+        
+        // Auto-fill project name if empty
+        if (!name) {
+          setName(file.name.replace('.sol', ' Project'));
+        }
+        toast.success(t('pages.projects.create.messages.file_loaded', { name: file.name }));
+      };
+      reader.readAsText(file);
+    });
+  };
+
+  const handleRemoveContract = (id: string) => {
+    setContracts(prev => {
+      const filtered = prev.filter(c => c.id !== id);
+      if (activeContractId === id) {
+        setActiveContractId(filtered[0]?.id || null);
+      }
+      return filtered;
+    });
+  };
+
+  const handleUpdateActiveSource = (source: string) => {
+    setContracts(prev => prev.map(c => 
+      c.id === activeContractId ? { ...c, soliditySource: source } : c
+    ));
+  };
+
+  const handleUpdateActiveName = (newName: string) => {
+    setContracts(prev => prev.map(c => 
+      c.id === activeContractId ? { ...c, name: newName } : c
+    ));
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const file = e.dataTransfer.files[0];
-    if (file) handleFileSelect(file);
+    if (e.dataTransfer.files) handleFileSelect(e.dataTransfer.files);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -86,33 +116,40 @@ export default function CreateProjectPage() {
     e.preventDefault();
 
     if (!walletId) {
-      toast.error('Please select a wallet');
+      toast.error(t('pages.projects.create.messages.select_wallet'));
       return;
     }
-    if (!soliditySource.trim()) {
-      toast.error('Please upload a Solidity file or paste source code');
+    if (contracts.length === 0) {
+      toast.error(t('pages.projects.create.messages.add_contract'));
       return;
     }
-    if (!soliditySource.includes('pragma solidity')) {
-      toast.error('Invalid Solidity: missing pragma statement');
-      return;
+    
+    // Simple validation
+    for (const c of contracts) {
+      if (!c.soliditySource.includes('pragma solidity')) {
+        toast.error(t('pages.projects.create.messages.invalid_solidity', { name: c.name }));
+        return;
+      }
     }
 
     setIsSubmitting(true);
     try {
       const { data } = await api.post<ApiResponse<Project>>('/projects', {
         walletId,
-        name: name || 'Untitled Project',
+        name: name || t('pages.projects.create.untitled_project'),
         description,
-        soliditySource,
+        contracts: contracts.map(c => ({
+          name: c.name,
+          soliditySource: c.soliditySource
+        }))
       });
 
       if (data.success && data.data) {
-        toast.success('Project created!');
+        toast.success(t('pages.projects.create.messages.project_created'));
         navigate(`/projects/${data.data._id}`);
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Failed to create project';
+      const msg = err?.response?.data?.message || t('pages.projects.create.messages.create_project_failed');
       toast.error(msg);
     } finally {
       setIsSubmitting(false);
@@ -126,13 +163,13 @@ export default function CreateProjectPage() {
         <div className="form-section">
           <label className="input-label">
             <HiOutlineWallet style={{ verticalAlign: 'middle', marginRight: 6 }} />
-            Deployer Wallet
+            {t('pages.projects.create.deployer_wallet')}
           </label>
           {walletsLoading ? (
             <div className="skeleton" style={{ height: 44 }} />
           ) : wallets.length === 0 ? (
             <div className="form-warning">
-              ⚠️ No wallets found. <a href="/wallets">Create one first</a>
+              ⚠️ {t('pages.projects.create.no_wallets_found')} <a href="/wallets">{t('pages.projects.create.create_one_first')}</a>
             </div>
           ) : (
             <select
@@ -152,22 +189,22 @@ export default function CreateProjectPage() {
         {/* Project Info */}
         <div className="form-row">
           <div className="form-section" style={{ flex: 1 }}>
-            <label className="input-label">Project Name</label>
+            <label className="input-label">{t('pages.projects.create.project_name')}</label>
             <input
               className="input"
               type="text"
-              placeholder="e.g., MyToken"
+              placeholder={t('pages.projects.create.project_name_placeholder')}
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={100}
             />
           </div>
           <div className="form-section" style={{ flex: 2 }}>
-            <label className="input-label">Description (optional)</label>
+            <label className="input-label">{t('pages.projects.create.description')}</label>
             <input
               className="input"
               type="text"
-              placeholder="Brief description of your contract"
+              placeholder={t('pages.projects.create.description_placeholder')}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               maxLength={500}
@@ -179,11 +216,11 @@ export default function CreateProjectPage() {
         <div className="form-section">
           <label className="input-label">
             <HiOutlineCodeBracket style={{ verticalAlign: 'middle', marginRight: 6 }} />
-            Solidity Source Code
+            {t('pages.projects.create.solidity_contracts')}
           </label>
 
           <div
-            className={`drop-zone ${soliditySource ? 'has-file' : ''}`}
+            className={`drop-zone ${contracts.length > 0 ? 'has-file' : ''}`}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onClick={() => document.getElementById('sol-file-input')?.click()}
@@ -192,42 +229,97 @@ export default function CreateProjectPage() {
               id="sol-file-input"
               type="file"
               accept=".sol"
+              multiple
               style={{ display: 'none' }}
               onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleFileSelect(file);
+                if (e.target.files) handleFileSelect(e.target.files);
               }}
             />
-            {soliditySource ? (
-              <div className="drop-zone-loaded">
-                <HiOutlineDocumentArrowUp className="drop-zone-icon loaded" />
-                <span className="drop-zone-filename">{fileName || 'Source loaded'}</span>
-                <span className="drop-zone-hint">Click or drop to replace</span>
-              </div>
-            ) : (
-              <div className="drop-zone-empty">
-                <HiOutlineDocumentArrowUp className="drop-zone-icon" />
-                <span className="drop-zone-text">Drop your <strong>.sol</strong> file here</span>
-                <span className="drop-zone-hint">or click to browse</span>
-              </div>
-            )}
+            <div className="drop-zone-empty">
+              <HiOutlineDocumentArrowUp className="drop-zone-icon" />
+              <div className="drop-zone-text" dangerouslySetInnerHTML={{ __html: t('pages.projects.create.drop_files') }} />
+              <span className="drop-zone-hint">{t('pages.projects.create.browse_multiple')}</span>
+            </div>
           </div>
         </div>
 
-        {/* Source Code Preview / Textarea */}
-        <div className="form-section">
-          <label className="input-label">
-            Source Preview {soliditySource && <span className="char-count">({soliditySource.length} chars)</span>}
-          </label>
-          <textarea
-            className="input source-textarea"
-            placeholder="// SPDX-License-Identifier: MIT&#10;pragma solidity ^0.8.20;&#10;&#10;contract MyContract {&#10;    // ...&#10;}"
-            value={soliditySource}
-            onChange={(e) => setSoliditySource(e.target.value)}
-            rows={12}
-            spellCheck={false}
-          />
-        </div>
+        {/* Contract List & Editor */}
+        {contracts.length > 0 && (
+          <div className="contract-setup-container">
+            <div className="contract-list-sidebar">
+              {contracts.map(c => (
+                <div 
+                  key={c.id} 
+                  className={`contract-item ${activeContractId === c.id ? 'active' : ''}`}
+                  onClick={() => setActiveContractId(c.id)}
+                >
+                  <span className="contract-item-name">{c.name}</span>
+                  <button 
+                    type="button" 
+                    className="contract-item-remove"
+                    onClick={(e) => { e.stopPropagation(); handleRemoveContract(c.id); }}
+                  >
+                    <HiOutlineXMark />
+                  </button>
+                </div>
+              ))}
+              <button 
+                type="button" 
+                className="btn-add-manual"
+                onClick={() => {
+                  const id = Math.random().toString(36).substring(2, 9);
+                  const newC = { id, name: 'NewContract', soliditySource: 'pragma solidity ^0.8.20;\n\ncontract NewContract {\n\n}' };
+                  setContracts([...contracts, newC]);
+                  setActiveContractId(id);
+                }}
+              >
+                <HiOutlinePlusCircle /> {t('pages.projects.create.add_more')}
+              </button>
+            </div>
+
+            <div className="contract-editor-main">
+              {activeContractId && (
+                <>
+                   <div className="editor-header">
+                    <input 
+                      className="contract-name-input"
+                      value={contracts.find(c => c.id === activeContractId)?.name || ''}
+                      onChange={(e) => handleUpdateActiveName(e.target.value)}
+                      placeholder={t('pages.projects.create.contract_name')}
+                    />
+                    <span className="char-count">
+                      ({contracts.find(c => c.id === activeContractId)?.soliditySource.length || 0} {t('pages.projects.create.chars')})
+                    </span>
+                  </div>
+                  <textarea
+                    className="input source-textarea"
+                    value={contracts.find(c => c.id === activeContractId)?.soliditySource || ''}
+                    onChange={(e) => handleUpdateActiveSource(e.target.value)}
+                    rows={15}
+                    spellCheck={false}
+                  />
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Empty state manual add */}
+        {contracts.length === 0 && (
+          <div className="form-section center-add">
+            <button 
+              type="button" 
+              className="btn btn-ghost"
+              onClick={() => {
+                const id = Math.random().toString(36).substring(2, 9);
+                setContracts([{ id, name: 'MyContract', soliditySource: 'pragma solidity ^0.8.20;\n\ncontract MyContract {\n\n}' }]);
+                setActiveContractId(id);
+              }}
+            >
+              <HiOutlinePlusCircle /> {t('pages.projects.create.start_blank')}
+            </button>
+          </div>
+        )}
 
         {/* Submit */}
         <div className="form-actions">
@@ -236,17 +328,17 @@ export default function CreateProjectPage() {
             className="btn btn-secondary"
             onClick={() => navigate('/projects')}
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
             className="btn btn-primary btn-lg"
-            disabled={isSubmitting || !soliditySource.trim() || !walletId}
+            disabled={isSubmitting || contracts.length === 0 || !walletId}
           >
             {isSubmitting ? (
-              <><span className="spinner" /> Creating...</>
+              <><span className="spinner" /> {t('pages.projects.create.creating')}</>
             ) : (
-              <><HiOutlinePlusCircle /> Create Project</>
+              <><HiOutlinePlusCircle /> {t('pages.projects.create.create_project')}</>
             )}
           </button>
         </div>

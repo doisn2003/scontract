@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, Navigate } from 'react-router-dom';
 import { ethers } from 'ethers';
 import {
   HiOutlineArrowPath,
@@ -30,11 +30,15 @@ type TabKey = 'read' | 'write' | 'payable';
 
 export default function InteractPage() {
   const { t } = useTranslation();
-  const { id } = useParams<{ id: string }>();
+  const { id, contractId } = useParams<{ id: string; contractId: string }>();
   const mm = useMetaMask();
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabKey>('read');
+
+  const activeContract = project?.contracts?.find(c => c._id === contractId) || project?.contracts?.[0];
+  const contractAddress = activeContract?.contractAddress;
+  const abi = activeContract?.abi;
 
   // Per-function state: inputs, results, loading
   const [inputValues, setInputValues] = useState<Record<string, Record<string, string>>>({});
@@ -55,7 +59,7 @@ export default function InteractPage() {
 
   useEffect(() => { fetchProject(); }, [fetchProject]);
 
-  const parsedAbi = project?.abi ? parseABI(project.abi) : null;
+  const parsedAbi = abi ? parseABI(abi) : null;
 
   // Generate tab counts
   const tabCounts: Record<TabKey, number> = {
@@ -66,7 +70,7 @@ export default function InteractPage() {
 
   // ── Read function (no MetaMask needed) ──
   const handleRead = async (fn: ParsedFunction) => {
-    if (!project?.contractAddress || !project?.abi) return;
+    if (!contractAddress || !abi) return;
 
     setLoadingFn(s => ({ ...s, [fn.name]: true }));
     setResults(s => ({ ...s, [fn.name]: {} }));
@@ -74,7 +78,7 @@ export default function InteractPage() {
     try {
       const rpcUrl = 'https://data-seed-prebsc-1-s1.bnbchain.org:8545/';
       const provider = new ethers.JsonRpcProvider(rpcUrl);
-      const contract = new ethers.Contract(project.contractAddress, project.abi as any, provider);
+      const contract = new ethers.Contract(contractAddress, abi as any, provider);
 
       const args = (fn.inputs || []).map(inp => {
         const val = inputValues[fn.name]?.[inp.name] ?? '';
@@ -94,7 +98,7 @@ export default function InteractPage() {
 
   // ── Write function (needs MetaMask) ──
   const handleWrite = async (fn: ParsedFunction, payableValue?: string) => {
-    if (!project?.contractAddress || !project?.abi) return;
+    if (!contractAddress || !abi) return;
     if (!mm.isConnected) {
       toast.error('Please connect MetaMask first');
       mm.connectWallet();
@@ -112,7 +116,7 @@ export default function InteractPage() {
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      const contract = new ethers.Contract(project.contractAddress, project.abi as any, signer);
+      const contract = new ethers.Contract(contractAddress, abi as any, signer);
 
       const args = (fn.inputs || []).map(inp => {
         const val = inputValues[fn.name]?.[inp.name] ?? '';
@@ -139,6 +143,7 @@ export default function InteractPage() {
         const gasUsed = receipt?.gasUsed ? Number(receipt.gasUsed) : 0;
         await api.post('/transactions', {
           projectId: id,
+          contractId,
           txHash: tx.hash,
           functionName: fn.name,
           args: (fn.inputs || []).map(inp => inputValues[fn.name]?.[inp.name] ?? ''),
@@ -174,7 +179,16 @@ export default function InteractPage() {
     );
   }
 
-  if (!project || !project.abi || !project.contractAddress) {
+  if (!project || project.contracts.length === 0) {
+    return <Navigate to="/projects" replace />;
+  }
+
+  // If contractId is missing or invalid, redirect to the first one
+  if (!contractId && project.contracts.length > 0) {
+    return <Navigate to={`/projects/${id}/contracts/${project.contracts[0]._id}/interact`} replace />;
+  }
+
+  if (!activeContract || !abi || !contractAddress) {
     return (
       <PageWrapper title="Not Available">
         <div className="card" style={{ textAlign: 'center', padding: 'var(--space-16)' }}>
@@ -253,10 +267,10 @@ export default function InteractPage() {
             <><HiOutlineArrowPath /> Query</>
           )}
         </button>
-        {isWrite && project?.contractAddress && project?.abi && (
+        {isWrite && contractAddress && abi && (
           <GasEstimate
-            contractAddress={project.contractAddress}
-            abi={project.abi as unknown[]}
+            contractAddress={contractAddress}
+            abi={abi as unknown[]}
             fn={fn}
             args={(fn.inputs || []).map(inp => {
               const val = inputValues[fn.name]?.[inp.name] ?? '';
@@ -314,8 +328,8 @@ export default function InteractPage() {
 
   return (
     <PageWrapper
-      title={`${t('nav.interact')}: ${project.name}`}
-      subtitle={`${project.contractAddress.slice(0, 10)}...${project.contractAddress.slice(-6)} ${t('pages.dashboard.stats.network')} ${project.network}`}
+      title={`${t('nav.interact')}: ${activeContract.name}`}
+      subtitle={`${contractAddress.slice(0, 10)}...${contractAddress.slice(-6)} ${t('pages.dashboard.stats.network')} ${project.network}`}
     >
       <div className="interact-page">
         {/* Network Warning */}
@@ -336,11 +350,11 @@ export default function InteractPage() {
               <HiOutlineCodeBracket />
               <span className="info-label">Contract Address:</span>
               <div className="info-value">
-                <span className="mono">{project.contractAddress}</span>
+                <span className="mono">{contractAddress}</span>
                 <button
                   className="copy-btn"
                   onClick={() => {
-                    navigator.clipboard.writeText(project.contractAddress!);
+                    navigator.clipboard.writeText(contractAddress!);
                     toast.success('Address copied!');
                   }}
                   title="Copy Address"
@@ -371,7 +385,7 @@ export default function InteractPage() {
             </div>
           </div>
           <a
-            href={`https://testnet.bscscan.com/address/${project.contractAddress}`}
+            href={`https://testnet.bscscan.com/address/${contractAddress}`}
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-ghost btn-sm"

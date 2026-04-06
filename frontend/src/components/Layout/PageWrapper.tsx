@@ -14,7 +14,7 @@ export default function PageWrapper({ children, title, subtitle, noSidebar }: Pa
       {title && (
         <div className="page-header">
           <h1 className="page-title">{title}</h1>
-          {subtitle && <p className="page-subtitle">{subtitle}</p>}
+          {subtitle && <div className="page-subtitle">{subtitle}</div>}
         </div>
       )}
       {children}

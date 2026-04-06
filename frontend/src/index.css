@@ -145,6 +145,12 @@
   box-sizing: border-box;
 }
 
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: transparent;
+}
+
 html {
   font-size: 16px;
   scroll-behavior: smooth;
@@ -158,8 +164,17 @@ body {
   font-weight: var(--font-weight-normal);
   line-height: var(--line-height-normal);
   color: var(--color-text-primary);
-  background-color: var(--color-bg-primary);
   min-height: 100vh;
+}
+
+.app-main-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  pointer-events: none;
 }
 
 a {

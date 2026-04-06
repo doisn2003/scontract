@@ -40,7 +40,7 @@ interface TestResult {
 
 export default function TestPage() {
   const { t } = useTranslation();
-  const { id } = useParams<{ id: string }>();
+  const { id, contractId } = useParams<{ id: string; contractId: string }>();
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [library, setLibrary] = useState<TestLibrary>('viem');
@@ -49,6 +49,8 @@ export default function TestPage() {
   const [result, setResult] = useState<TestResult | null>(null);
   const [showRawOutput, setShowRawOutput] = useState(false);
 
+  const activeContract = project?.contracts?.find(c => c._id === contractId);
+
   // Fetch project
   const fetchProject = useCallback(async () => {
     if (!id) return;
@@ -56,8 +58,9 @@ export default function TestPage() {
       const { data } = await api.get<ApiResponse<Project>>(`/projects/${id}`);
       if (data.success && data.data) {
         setProject(data.data);
-        // Auto-fill template
-        const contractName = data.data.contractName || data.data.name || 'MyContract';
+        // Auto-fill template using target contract
+        const targetContract = data.data.contracts?.find((c: any) => c._id === contractId);
+        const contractName = targetContract?.name || 'MyContract';
         setTestCode(getViemTemplate(contractName));
       }
     } catch {
@@ -72,7 +75,7 @@ export default function TestPage() {
   // Library switch → update template
   const handleLibraryChange = (lib: TestLibrary) => {
     setLibrary(lib);
-    const contractName = project?.contractName || project?.name || 'MyContract';
+    const contractName = activeContract?.name || 'MyContract';
     const template = lib === 'viem'
       ? getViemTemplate(contractName)
       : getEthersTemplate(contractName);
@@ -95,7 +98,7 @@ export default function TestPage() {
     setShowRawOutput(false);
 
     try {
-      const { data } = await api.post<ApiResponse<TestResult>>(`/tests/${id}`, {
+      const { data } = await api.post<ApiResponse<TestResult>>(`/tests/${id}/contracts/${contractId}`, {
         testCode,
         library,
       });
@@ -142,7 +145,7 @@ export default function TestPage() {
 
   return (
     <PageWrapper
-      title={`${t('pages.test.title')}: ${project.name}`}
+      title={`${t('pages.test.title')}: ${activeContract?.name || project.name}`}
       subtitle={t('pages.test.subtitle')}
     >
       <div className="test-page">
@@ -163,7 +166,7 @@ export default function TestPage() {
             <button
               className="btn btn-ghost btn-sm"
               onClick={() => {
-                const contractName = project.contractName || project.name || 'MyContract';
+                const contractName = activeContract?.name || 'MyContract';
                 setTestCode(library === 'viem' ? getViemTemplate(contractName) : getEthersTemplate(contractName));
                 toast.success('Template reset');
               }}

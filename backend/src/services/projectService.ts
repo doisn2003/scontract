@@ -1,11 +1,14 @@
 /**
  * projectService.ts
- * Business logic for the Compile & Deploy pipeline.
+ * Business logic cho pipeline Compile & Deploy đa hợp đồng.
  *
  * Flow:
- *   createProject()  → Lưu source vào DB (status: created)
- *   compileProject()  → Gọi sandboxService → Lưu ABI+Bytecode (status: compiled)
- *   deployProject()   → Lấy ABI+Bytecode, dùng ethers.ContractFactory.deploy() (status: deployed)
+ *   createProject()       → Lưu project + mảng contracts ban đầu (status: created)
+ *   compileContract()     → Compile theo contractId → Lưu ABI+Bytecode (status: compiled)
+ *   deployContract()      → Deploy theo contractId → Lưu địa chỉ (status: deployed)
+ *   addContract()         → Thêm contract mới vào project
+ *   removeContract()      → Xóa contract (luôn giữ ít nhất 1)
+ *   updateContract()      → Đổi tên / sửa source của 1 contract
  */
 
 import { ethers } from 'ethers';
@@ -15,74 +18,74 @@ import { decrypt } from '../utils/encryption.js';
 import { extractSolidityVersion, extractContractName, repairAddressChecksums } from '../utils/solidityParser.js';
 import { compileContract } from './sandboxService.js';
 import { createTransaction, getBnbPriceUSD } from './transactionService.js';
+import type { ISmartContract } from '../types/index.js';
 
 const GAS_PRICE_GWEI = 1; // BSC Testnet avg gas price
 
-
-// ──────────────────────────────
-// Create Project
-// ──────────────────────────────
+// ──────────────────────────────────────────────
+// Create Project (với mảng contracts ban đầu)
+// ──────────────────────────────────────────────
 
 export async function createProject(
   userId: string,
   walletId: string,
   name: string,
   description: string,
-  soliditySource: string
+  initialContracts: { soliditySource: string; name?: string }[]
 ) {
-  // Validate wallet belongs to user
   const wallet = await Wallet.findOne({ _id: walletId, userId });
-  if (!wallet) {
-    throw new Error('Wallet not found or does not belong to you');
+  if (!wallet) throw new Error('Wallet not found or does not belong to you');
+
+  if (!initialContracts || initialContracts.length === 0) {
+    throw new Error('At least one contract is required');
   }
 
-  // Extract metadata from source
-  const solidityVersion = extractSolidityVersion(soliditySource);
-  const contractName = extractContractName(soliditySource);
+  const contracts = initialContracts.map((c, idx) => {
+    const solidityVersion = extractSolidityVersion(c.soliditySource);
+    const detectedName = extractContractName(c.soliditySource);
+    return {
+      name: c.name || detectedName || `Contract${idx + 1}`,
+      soliditySource: c.soliditySource,
+      solidityVersion,
+      status: 'created' as const,
+    };
+  });
+
+
+  const projectName = name || contracts[0].name;
 
   const project = await Project.create({
     userId,
     walletId,
-    name: name || contractName,
-    contractName,
+    name: projectName,
     description: description || '',
-    soliditySource,
-    solidityVersion,
-    status: 'created',
     network: 'bsc-testnet',
+    contracts,
   });
 
   return project;
 }
 
-// ──────────────────────────────
-// Compile Project
-// ──────────────────────────────
+// ──────────────────────────────────────────────
+// Compile một Contract cụ thể
+// ──────────────────────────────────────────────
 
-export async function compileProject(projectId: string, userId: string) {
+export async function compileContract_(projectId: string, userId: string, contractId: string) {
   const project = await Project.findOne({ _id: projectId, userId });
-  if (!project) {
-    throw new Error('Project not found');
+  if (!project) throw new Error('Project not found');
+
+  const contract = project.contracts.id(contractId);
+  if (!contract) throw new Error('Contract not found in project');
+
+  const repairedSource = repairAddressChecksums(contract.soliditySource);
+  if (repairedSource !== contract.soliditySource) {
+    contract.soliditySource = repairedSource;
   }
 
-  if (!project.soliditySource) {
-    throw new Error('No Solidity source code found for this project');
-  }
+  const contractName = extractContractName(contract.soliditySource);
+  console.log(`[projectService] Compiling contract ${contractId}: ${contractName}`);
 
-  // Extract contract name from source
-  const contractName = extractContractName(project.soliditySource);
-
-  // ALWAYS repair checksums before compilation to be safe
-  const repairedSource = repairAddressChecksums(project.soliditySource);
-  if (repairedSource !== project.soliditySource) {
-    project.soliditySource = repairedSource;
-    // Don't save yet, will save with ABI/Status
-  }
-
-  console.log(`[projectService] Compiling project ${projectId}: ${contractName}`);
-
-  // Delegate to sandboxService (Phase 3)
-  const result = await compileContract(project.soliditySource, contractName);
+  const result = await compileContract(contract.soliditySource, contractName);
 
   if (!result.success) {
     const err = new Error(result.error || 'Compilation failed') as any;
@@ -90,100 +93,93 @@ export async function compileProject(projectId: string, userId: string) {
     throw err;
   }
 
-  // Update project with compile results
-  project.abi = result.abi as any;
-  project.bytecode = result.bytecode || '';
-  project.contractName = contractName; // Keep synced
-  project.solidityVersion = extractSolidityVersion(project.soliditySource);
-  project.status = 'compiled';
+  contract.abi = result.abi as any;
+  contract.bytecode = result.bytecode || '';
+  contract.name = contractName;
+  contract.solidityVersion = extractSolidityVersion(contract.soliditySource);
+  contract.status = 'compiled';
+
   await project.save();
 
   return {
     _id: project._id,
+    contractId: contract._id,
     name: project.name,
-    contractName,
-    status: project.status,
-    solidityVersion: project.solidityVersion,
-    abi: project.abi,
-    bytecode: project.bytecode,
+    contractName: contract.name,
+    status: contract.status,
+    solidityVersion: contract.solidityVersion,
+    abi: contract.abi,
+    bytecode: contract.bytecode,
   };
 }
 
-// ──────────────────────────────
-// Deploy Project
-// ──────────────────────────────
+// ──────────────────────────────────────────────
+// Deploy một Contract cụ thể
+// ──────────────────────────────────────────────
 
-export async function deployProject(
+export async function deployContract_(
   projectId: string,
   userId: string,
+  contractId: string,
   constructorArgs: unknown[] = []
 ) {
   const project = await Project.findOne({ _id: projectId, userId });
-  if (!project) {
-    throw new Error('Project not found');
+  if (!project) throw new Error('Project not found');
+
+  const contract = project.contracts.id(contractId);
+  if (!contract) throw new Error('Contract not found in project');
+
+  if (contract.status !== 'compiled') {
+    throw new Error(`Cannot deploy: contract status is "${contract.status}". Must compile first.`);
+  }
+  if (!contract.abi || !contract.bytecode) {
+    throw new Error('ABI or Bytecode missing. Please compile first.');
   }
 
-  if (project.status !== 'compiled') {
-    throw new Error(`Cannot deploy: project status is "${project.status}". Must compile first.`);
-  }
-
-  if (!project.abi || !project.bytecode) {
-    throw new Error('ABI or Bytecode missing. Please compile the project first.');
-  }
-
-  // Get the wallet's private key for deployment
   const wallet = await Wallet.findById(project.walletId);
-  if (!wallet) {
-    throw new Error('Associated wallet not found');
-  }
+  if (!wallet) throw new Error('Associated wallet not found');
 
   const privateKey = decrypt(wallet.encryptedPrivateKey);
   const rpcUrl = process.env.RPC_URL;
-  if (!rpcUrl) {
-    throw new Error('RPC_URL is not configured');
-  }
+  if (!rpcUrl) throw new Error('RPC_URL is not configured');
 
-  console.log(`[projectService] Deploying project ${projectId} to BSC Testnet`);
+  console.log(`[projectService] Deploying contract ${contractId} to BSC Testnet`);
   console.log(`[projectService] Deployer: ${wallet.address}`);
 
-  // Deploy using ethers.js
   const provider = new ethers.JsonRpcProvider(rpcUrl);
   const deployerWallet = new ethers.Wallet(privateKey, provider);
 
-  const factory = new ethers.ContractFactory(
-    project.abi as any,
-    project.bytecode,
-    deployerWallet
-  );
+  const factory = new ethers.ContractFactory(contract.abi as any, contract.bytecode, deployerWallet);
+  let deployedContract;
 
-  let contract;
   try {
-    contract = await factory.deploy(...constructorArgs);
-    await contract.waitForDeployment();
+    deployedContract = await factory.deploy(...constructorArgs);
+    await deployedContract.waitForDeployment();
   } catch (err: any) {
-    if (err.message && err.message.includes('insufficient funds')) {
-      throw new Error(`Insufficient funds for gas. The Server Wallet (${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}) does not have enough tBNB. Please use the Faucet on your Dashboard to get testnet BNB before deploying.`);
+    if (err.message?.includes('insufficient funds')) {
+      throw new Error(
+        `Insufficient funds. Wallet ${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)} does not have enough tBNB. Use the Faucet to get testnet BNB.`
+      );
     }
     throw err;
   }
 
-  const contractAddress = await contract.getAddress();
-  const deployTx = contract.deploymentTransaction();
+  const contractAddress = await deployedContract.getAddress();
+  const deployTx = deployedContract.deploymentTransaction();
 
   console.log(`[projectService] ✅ Deployed at: ${contractAddress}`);
 
-  // Update project
-  project.contractAddress = contractAddress;
-  project.status = 'deployed';
+  contract.contractAddress = contractAddress;
+  contract.status = 'deployed';
   await project.save();
 
-  // Save deploy transaction to history
   if (deployTx?.hash) {
     try {
       const receipt = await provider.getTransactionReceipt(deployTx.hash);
       const gasUsed = receipt?.gasUsed ? Number(receipt.gasUsed) : 0;
       await createTransaction({
         projectId: (project._id as any).toString(),
+        contractId: contractId,
         userId,
         txHash: deployTx.hash,
         functionName: '__deploy__',
@@ -193,59 +189,119 @@ export async function deployProject(
       });
       console.log(`[projectService] Deploy tx recorded: ${deployTx.hash}`);
     } catch (txErr) {
-      // Non-critical — don't fail the whole deploy
       console.warn('[projectService] Failed to record deploy tx:', txErr);
     }
   }
 
   return {
     _id: project._id,
+    contractId: contract._id,
     name: project.name,
-    status: project.status,
+    contractName: contract.name,
+    status: contract.status,
     contractAddress,
     network: project.network,
     txHash: deployTx?.hash || null,
   };
 }
 
-// ──────────────────────────────
-// Query Helpers
-// ──────────────────────────────
+// ──────────────────────────────────────────────
+// Thêm Contract mới vào Project
+// ──────────────────────────────────────────────
 
-export async function getUserProjects(userId: string) {
-  return Project.find({ userId })
-    .select('-soliditySource')
-    .sort({ createdAt: -1 })
-    .lean();
-}
+export async function addContract(
+  projectId: string,
+  userId: string,
+  soliditySource: string,
+  name?: string
+) {
+  const project = await Project.findOne({ _id: projectId, userId });
+  if (!project) throw new Error('Project not found');
 
-export async function getProjectById(projectId: string, userId: string) {
-  const project = await Project.findById(projectId)
-    .populate('walletId', 'address')
-    .lean();
-  if (!project) return null;
+  const detectedName = extractContractName(soliditySource);
+  const solidityVersion = extractSolidityVersion(soliditySource);
 
-  // Allow access if the user is the owner OR if the project is deployed (publicly available for interaction)
-  if (project.userId.toString() !== userId.toString() && project.status !== 'deployed') {
-    return null;
-  }
+  const newContract = {
+    name: name || detectedName || `Contract${project.contracts.length + 1}`,
+    soliditySource,
+    solidityVersion,
+    status: 'created' as const,
+    abi: null,
+    bytecode: null,
+    contractAddress: null,
+  };
+
+  project.contracts.push(newContract as any);
+  await project.save();
+
   return project;
 }
 
-export async function getDeployedProjects() {
-  return Project.find({ status: 'deployed' })
-    .select('name description contractAddress network status createdAt userId')
-    .sort({ createdAt: -1 })
-    .lean();
+// ──────────────────────────────────────────────
+// Xóa Contract (luôn giữ ít nhất 1)
+// ──────────────────────────────────────────────
+
+export async function removeContract(projectId: string, userId: string, contractId: string) {
+  const project = await Project.findOne({ _id: projectId, userId });
+  if (!project) throw new Error('Project not found');
+
+  if (project.contracts.length <= 1) {
+    throw new Error('Cannot delete the last contract. A project must have at least one smart contract.');
+  }
+
+  const contract = project.contracts.id(contractId);
+  if (!contract) throw new Error('Contract not found in project');
+
+  project.contracts.pull({ _id: contractId });
+  await project.save();
+
+  return project;
 }
 
-// ──────────────────────────────
-// Estimate Deploy Gas Cost
-// ──────────────────────────────
+// ──────────────────────────────────────────────
+// Cập nhật Contract (đổi tên / sửa source)
+// ──────────────────────────────────────────────
+
+export async function updateContract(
+  projectId: string,
+  userId: string,
+  contractId: string,
+  updates: { name?: string; soliditySource?: string }
+) {
+  const project = await Project.findOne({ _id: projectId, userId });
+  if (!project) throw new Error('Project not found');
+
+  const contract = project.contracts.id(contractId);
+  if (!contract) throw new Error('Contract not found in project');
+
+  if (updates.name !== undefined) {
+    contract.name = updates.name;
+  }
+
+  if (updates.soliditySource !== undefined) {
+    if (contract.status === 'deployed') {
+      throw new Error('Cannot edit source code after contract is deployed');
+    }
+    contract.soliditySource = updates.soliditySource;
+    contract.solidityVersion = extractSolidityVersion(updates.soliditySource);
+    // Reset compilation state nếu source thay đổi
+    contract.abi = null as any;
+    contract.bytecode = null as any;
+    contract.status = 'created';
+  }
+
+  await project.save();
+  return project;
+}
+
+// ──────────────────────────────────────────────
+// Estimate Gas cho 1 Contract
+// ──────────────────────────────────────────────
 
 export async function estimateDeployGas(
   projectId: string,
   userId: string,
+  contractId: string,
   constructorArgs: unknown[] = []
 ): Promise<{
   gasLimit: string;
@@ -257,12 +313,14 @@ export async function estimateDeployGas(
   const project = await Project.findOne({ _id: projectId, userId });
   if (!project) throw new Error('Project not found');
 
-  if (project.status !== 'compiled') {
-    throw new Error(`Cannot estimate: project status is "${project.status}". Must compile first.`);
-  }
+  const contract = project.contracts.id(contractId);
+  if (!contract) throw new Error('Contract not found in project');
 
-  if (!project.abi || !project.bytecode) {
-    throw new Error('ABI or Bytecode missing. Please compile the project first.');
+  if (contract.status !== 'compiled') {
+    throw new Error(`Cannot estimate: contract status is "${contract.status}". Must compile first.`);
+  }
+  if (!contract.abi || !contract.bytecode) {
+    throw new Error('ABI or Bytecode missing. Please compile first.');
   }
 
   const wallet = await Wallet.findById(project.walletId);
@@ -272,22 +330,24 @@ export async function estimateDeployGas(
   if (!rpcUrl) throw new Error('RPC_URL is not configured');
 
   const provider = new ethers.JsonRpcProvider(rpcUrl);
-
-  // Dry-run: build deploy transaction and estimate gas without signing/broadcasting
-  const factory = new ethers.ContractFactory(project.abi as any, project.bytecode);
-  const deployTx = await factory.getDeployTransaction(...constructorArgs);
+  const factory = new ethers.ContractFactory(contract.abi as any, contract.bytecode);
+  
+  let deployTx;
+  try {
+    deployTx = await factory.getDeployTransaction(...constructorArgs);
+  } catch (err: any) {
+    if (err.message?.includes('incorrect number of arguments')) {
+      throw new Error('common.errors.constructor_mismatch');
+    }
+    throw err;
+  }
 
   let gasLimit: bigint;
   try {
-    gasLimit = await provider.estimateGas({
-      ...deployTx,
-      from: wallet.address,
-    });
-    // Add 20% buffer for safety
+    gasLimit = await provider.estimateGas({ ...deployTx, from: wallet.address });
     gasLimit = (gasLimit * 120n) / 100n;
   } catch {
-    // Fallback: rough estimate based on bytecode size
-    const bytecodeBytes = project.bytecode.length / 2;
+    const bytecodeBytes = contract.bytecode.length / 2;
     gasLimit = BigInt(Math.ceil(bytecodeBytes * 200 + 21000));
   }
 
@@ -304,6 +364,39 @@ export async function estimateDeployGas(
   };
 }
 
+// ──────────────────────────────────────────────
+// Query Helpers
+// ──────────────────────────────────────────────
+
+export async function getUserProjects(userId: string) {
+  return Project.find({ userId })
+    .select('-contracts.soliditySource -contracts.bytecode')
+    .sort({ createdAt: -1 })
+    .lean();
+}
+
+export async function getProjectById(projectId: string, userId: string) {
+  const project = await Project.findById(projectId)
+    .populate('walletId', 'address')
+    .lean();
+  if (!project) return null;
+
+  // Cho phép truy cập nếu là owner HOẶC có ít nhất 1 contract đã deployed (public)
+  const hasDeployed = project.contracts.some((c: any) => c.status === 'deployed');
+  if (project.userId.toString() !== userId.toString() && !hasDeployed) {
+    return null;
+  }
+  return project;
+}
+
+export async function getDeployedProjects() {
+  // Lấy projects có ít nhất 1 contract deployed
+  return Project.find({ 'contracts.status': 'deployed' })
+    .select('name description contracts.contractAddress contracts.status contracts.name network createdAt userId')
+    .sort({ createdAt: -1 })
+    .lean();
+}
+
 export async function deleteProject(projectId: string, userId: string) {
   const result = await Project.deleteOne({ _id: projectId, userId });
   if (result.deletedCount === 0) {
@@ -314,7 +407,7 @@ export async function deleteProject(projectId: string, userId: string) {
 export async function updateProject(
   projectId: string,
   userId: string,
-  updates: { name?: string; description?: string; soliditySource?: string }
+  updates: { name?: string; description?: string }
 ) {
   const project = await Project.findOne({ _id: projectId, userId });
   if (!project) throw new Error('Project not found');
@@ -322,17 +415,28 @@ export async function updateProject(
   if (updates.name !== undefined) project.name = updates.name;
   if (updates.description !== undefined) project.description = updates.description;
 
-  if (updates.soliditySource !== undefined) {
-    if (project.status === 'deployed') {
-      throw new Error('Cannot edit source code after contract is deployed');
-    }
-    project.soliditySource = updates.soliditySource;
-    // Re-extract metadata
-    project.solidityVersion = extractSolidityVersion(updates.soliditySource);
-    project.contractName = extractContractName(updates.soliditySource);
-  }
-
   await project.save();
   return project;
 }
 
+export async function reorderContracts(projectId: string, userId: string, contractIds: string[]) {
+  const project = await Project.findOne({ _id: projectId, userId });
+  if (!project) throw new Error('Project not found');
+
+  if (contractIds.length !== project.contracts.length) {
+    throw new Error('Invalid number of contracts provided for reordering');
+  }
+
+  // Sắp xếp lại dựa trên mảng IDs nhận được
+  const reordered = contractIds.map(id => {
+    const c = project.contracts.id(id);
+    if (!c) throw new Error(`Contract ${id} not found in project`);
+    return c;
+  });
+
+  // Gán lại mảng (Mongoose subdoc array)
+  project.contracts = reordered as any;
+  await project.save();
+  
+  return project;
+}

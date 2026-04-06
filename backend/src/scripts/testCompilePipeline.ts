@@ -1,13 +1,8 @@
 /**
  * testCompilePipeline.ts
- * End-to-end test for Phase 4: Create → Compile → verify ABI/Bytecode in DB.
+ * End-to-end test cho pipeline đa hợp đồng: Create → Compile → verify ABI/Bytecode in DB.
  *
  * Usage: node --loader ts-node/esm src/scripts/testCompilePipeline.ts
- *
- * Prerequisites:
- *   1. Backend running (npm run dev)
- *   2. Docker running + scontract-hardhat-base image built
- *   3. A user account exists in the system
  */
 
 import 'dotenv/config';
@@ -59,30 +54,35 @@ async function main() {
     }
     console.log(`💼 Using wallet: ${wallet.address} (${wallet._id})`);
 
-    // ─── Step 3: Create project ───
+    // ─── Step 3: Create project (multi-contract API) ───
     console.log('\n' + '='.repeat(60));
-    console.log('TEST 1: Create Project');
+    console.log('TEST 1: Create Project with 1 initial contract');
     console.log('='.repeat(60));
     const project = await projectService.createProject(
       user._id.toString(),
       wallet._id.toString(),
       'Test SimpleStorage',
       'Phase 4 integration test',
-      SIMPLE_STORAGE_SOL
+      [{ soliditySource: SIMPLE_STORAGE_SOL, name: 'SimpleStorage' }]
     );
     console.log(`✅ Created project: ${project._id}`);
     console.log(`   Name: ${project.name}`);
-    console.log(`   Status: ${project.status}`);
-    console.log(`   Solidity: ${project.solidityVersion}`);
+    console.log(`   Contracts: ${project.contracts.length}`);
+
+    const contract = project.contracts[0];
+    const contractId = (contract._id as any).toString();
+    console.log(`   Contract[0] ID: ${contractId}`);
+    console.log(`   Contract[0] Status: ${contract.status}`);
 
     // ─── Step 4: Compile ───
     console.log('\n' + '='.repeat(60));
-    console.log('TEST 2: Compile Project (Docker sandbox)');
+    console.log('TEST 2: Compile Contract (Docker sandbox)');
     console.log('='.repeat(60));
     console.log('⏳ Starting compilation... (may take 10-30s)');
-    const compileResult = await projectService.compileProject(
+    const compileResult = await projectService.compileContract_(
       project._id.toString(),
-      user._id.toString()
+      user._id.toString(),
+      contractId
     );
     console.log(`✅ Compilation result:`);
     console.log(`   Status: ${compileResult.status}`);
@@ -98,11 +98,13 @@ async function main() {
       console.error('❌ Project not found in DB!');
       process.exit(1);
     }
+    const dbContract = dbProject.contracts.find((c: any) => c._id.toString() === contractId);
     const checks = {
-      'status=compiled': dbProject.status === 'compiled',
-      'abi present': Array.isArray(dbProject.abi) && dbProject.abi.length > 0,
-      'bytecode present': typeof dbProject.bytecode === 'string' && dbProject.bytecode.length > 0,
-      'version set': typeof dbProject.solidityVersion === 'string',
+      'contracts array exists': Array.isArray(dbProject.contracts) && dbProject.contracts.length > 0,
+      'contract status=compiled': dbContract?.status === 'compiled',
+      'abi present': Array.isArray(dbContract?.abi) && (dbContract?.abi?.length ?? 0) > 0,
+      'bytecode present': typeof dbContract?.bytecode === 'string' && (dbContract?.bytecode?.length ?? 0) > 0,
+      'version set': typeof dbContract?.solidityVersion === 'string',
     };
 
     for (const [name, pass] of Object.entries(checks)) {
@@ -114,7 +116,7 @@ async function main() {
     console.log(allPass ? '🎉 ALL TESTS PASSED' : '❌ SOME TESTS FAILED');
     console.log('='.repeat(60));
 
-    // Cleanup: remove test project
+    // Cleanup
     await Project.findByIdAndDelete(project._id);
     console.log('🗑️  Test project cleaned up.');
 

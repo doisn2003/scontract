@@ -42,7 +42,7 @@ export default function WalletsPage() {
         setWallets(data.data);
       }
     } catch {
-      toast.error('Failed to load wallets');
+      toast.error(t('pages.wallets.messages.load_failed'));
     } finally {
       setIsLoading(false);
     }
@@ -61,7 +61,7 @@ export default function WalletsPage() {
         setBalances(prev => ({ ...prev, [walletId]: data.data!.balance }));
       }
     } catch {
-      toast.error('Failed to fetch balance');
+      toast.error(t('pages.wallets.messages.fetch_balance_failed'));
     } finally {
       setBalanceLoading(prev => ({ ...prev, [walletId]: false }));
     }
@@ -77,13 +77,13 @@ export default function WalletsPage() {
         walletType: 'user',
       });
       if (data.success && data.data) {
-        toast.success('Wallet created successfully!');
+        toast.success(t('pages.wallets.messages.create_success'));
         setShowCreateModal(false);
         setNewWalletLabel('');
         fetchWallets();
       }
     } catch {
-      toast.error('Failed to create wallet');
+      toast.error(t('pages.wallets.messages.create_failed'));
     } finally {
       setCreateLoading(false);
     }
@@ -101,7 +101,7 @@ export default function WalletsPage() {
         setPrivateKey(data.data.privateKey);
       }
     } catch {
-      toast.error('Failed to retrieve private key');
+      toast.error(t('pages.wallets.messages.pk_retrieve_failed'));
       setShowPKModal(false);
     } finally {
       setPKLoading(false);
@@ -111,7 +111,7 @@ export default function WalletsPage() {
   // Copy to clipboard
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    toast.success(`${label} copied!`);
+    toast.success(t('pages.wallets.messages.copied_success', { label }));
   };
 
   return (
@@ -123,10 +123,10 @@ export default function WalletsPage() {
         {/* Header with create button */}
         <div className="wallets-header">
           <span style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)' }}>
-            {wallets.length} wallet{wallets.length !== 1 ? 's' : ''}
+            {t('pages.wallets.count', { count: wallets.length })}
           </span>
           <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
-            <HiOutlinePlusCircle /> New Wallet
+            <HiOutlinePlusCircle /> {t('pages.wallets.new_wallet')}
           </button>
         </div>
 
@@ -145,10 +145,10 @@ export default function WalletsPage() {
         ) : wallets.length === 0 ? (
           <div className="card wallets-empty">
             <div className="wallets-empty-icon">💼</div>
-            <h3>No wallets yet</h3>
-            <p>Create your first wallet to get started with smart contract testing.</p>
+            <h3>{t('pages.wallets.no_wallets')}</h3>
+            <p>{t('pages.wallets.no_wallets_desc')}</p>
             <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
-              <HiOutlinePlusCircle /> Create Wallet
+              <HiOutlinePlusCircle /> {t('pages.wallets.create_wallet')}
             </button>
           </div>
         ) : (
@@ -171,8 +171,8 @@ export default function WalletsPage() {
                   <span className="wallet-address">{wallet.address}</span>
                   <button
                     className="copy-btn"
-                    onClick={() => copyToClipboard(wallet.address, 'Address')}
-                    title="Copy address"
+                    onClick={() => copyToClipboard(wallet.address, t('pages.wallets.label'))}
+                    title={t('pages.wallets.copy_address')}
                   >
                     <HiOutlineDocumentDuplicate />
                   </button>
@@ -194,7 +194,7 @@ export default function WalletsPage() {
                       className="btn btn-ghost btn-sm"
                       onClick={() => fetchBalance(wallet._id)}
                     >
-                      <HiOutlineArrowPath /> Check Balance
+                      <HiOutlineArrowPath /> {t('pages.wallets.check_balance')}
                     </button>
                   )}
                 </div>
@@ -204,9 +204,9 @@ export default function WalletsPage() {
                   <button
                     className="btn btn-secondary btn-sm"
                     onClick={() => handleShowPK(wallet._id)}
-                    title="View Private Key"
+                    title={t('pages.wallets.view_private_key')}
                   >
-                    <HiOutlineKey /> PK
+                    <HiOutlineKey /> {t('pages.wallets.private_key')}
                   </button>
                   
                   <FaucetButton 
@@ -217,7 +217,7 @@ export default function WalletsPage() {
                   <button
                     className="btn btn-ghost btn-sm"
                     onClick={() => fetchBalance(wallet._id)}
-                    title="Check Balance"
+                    title={t('pages.wallets.check_balance')}
                   >
                     <HiOutlineArrowPath />
                   </button>
@@ -232,22 +232,22 @@ export default function WalletsPage() {
           <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
-                <h2 className="modal-title">Create New Wallet</h2>
+                <h2 className="modal-title">{t('pages.wallets.create_modal_title')}</h2>
                 <button className="btn btn-ghost btn-sm" onClick={() => setShowCreateModal(false)}>
                   <HiOutlineXMark />
                 </button>
               </div>
               <p className="modal-description">
-                A new wallet with a random private key will be generated. You can import it into MetaMask later.
+                {t('pages.wallets.create_modal_desc')}
               </p>
               <form className="create-wallet-form" onSubmit={handleCreateWallet}>
                 <div className="auth-field">
-                  <label className="input-label" htmlFor="wallet-label">Wallet Label</label>
+                  <label className="input-label" htmlFor="wallet-label">{t('pages.wallets.label')}</label>
                   <input
                     id="wallet-label"
                     className="input"
                     type="text"
-                    placeholder="e.g., Testing Wallet"
+                    placeholder={t('pages.wallets.label_placeholder')}
                     value={newWalletLabel}
                     onChange={(e) => setNewWalletLabel(e.target.value)}
                     maxLength={30}
@@ -255,10 +255,10 @@ export default function WalletsPage() {
                 </div>
                 <div className="modal-actions">
                   <button type="button" className="btn btn-secondary" onClick={() => setShowCreateModal(false)}>
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button type="submit" className="btn btn-primary" disabled={createLoading}>
-                    {createLoading ? <span className="spinner" /> : 'Create Wallet'}
+                    {createLoading ? <span className="spinner" /> : t('pages.wallets.create_wallet')}
                   </button>
                 </div>
               </form>
@@ -273,15 +273,14 @@ export default function WalletsPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
                 <h2 className="modal-title">
                   <HiOutlineEye style={{ verticalAlign: 'middle', marginRight: 8 }} />
-                  Private Key
+                  {t('pages.wallets.private_key')}
                 </h2>
                 <button className="btn btn-ghost btn-sm" onClick={() => { setShowPKModal(false); setPrivateKey(null); }}>
                   <HiOutlineXMark />
                 </button>
               </div>
               <div className="modal-warning">
-                ⚠️ <strong>Never share your private key!</strong> Anyone with this key has full control of this wallet.
-                Copy this key and import it into MetaMask to sign transactions.
+                {t('pages.wallets.generated_pk_warning')}
               </div>
 
               {pkLoading ? (
@@ -294,16 +293,16 @@ export default function WalletsPage() {
                 {privateKey && (
                   <button
                     className="btn btn-primary"
-                    onClick={() => copyToClipboard(privateKey, 'Private Key')}
+                    onClick={() => copyToClipboard(privateKey, t('pages.wallets.label'))}
                   >
-                    <HiOutlineDocumentDuplicate /> Copy Key
+                    <HiOutlineDocumentDuplicate /> {t('pages.wallets.copy_key')}
                   </button>
                 )}
                 <button
                   className="btn btn-secondary"
                   onClick={() => { setShowPKModal(false); setPrivateKey(null); }}
                 >
-                  Close
+                  {t('pages.wallets.close')}
                 </button>
               </div>
             </div>

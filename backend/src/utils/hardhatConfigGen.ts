@@ -55,6 +55,31 @@ export function generateHardhatConfig(options: HardhatConfigOptions): string {
   },`;
   }
 
+  // Helper to get safe settings based on version
+  const getCompilerSettings = (version: string) => {
+    const settings: any = {
+      optimizer: { enabled: true, runs: 200 },
+    };
+
+    // 'cancun' only supported in 0.8.24+
+    // 'shanghai' only supported in 0.8.20+
+    // For older versions, let solc use its default or specify a safe one
+    const ver = version.split('.').map(Number);
+    if (ver[0] === 0 && ver[1] === 8 && ver[2] >= 24) {
+      settings.evmVersion = "cancun";
+    } else if (ver[0] === 0 && ver[1] === 8 && ver[2] >= 20) {
+      settings.evmVersion = "shanghai";
+    } else if (ver[0] === 0 && ver[1] === 8 && ver[2] >= 18) {
+      settings.evmVersion = "paris";
+    } else if (ver[0] === 0 && ver[1] === 8 && ver[2] >= 15) {
+        // Safe for middle 0.8.x
+        settings.evmVersion = "london";
+    }
+    // For very old versions, we don't specify evmVersion to use solc default
+    
+    return settings;
+  };
+
   const config = `
 ${pluginRequire}
 
@@ -64,24 +89,15 @@ module.exports = {
     compilers: [
       {
         version: "${solidityVersion}",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-          evmVersion: "cancun"
-        }
+        settings: ${JSON.stringify(getCompilerSettings(solidityVersion), null, 10).replace(/\n\s+}/g, ' }')}
       },
       {
         version: "0.8.24",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-          evmVersion: "cancun"
-        }
+        settings: { optimizer: { enabled: true, runs: 200 }, evmVersion: "cancun" }
       },
       {
         version: "0.8.26",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-          evmVersion: "cancun"
-        }
+        settings: { optimizer: { enabled: true, runs: 200 }, evmVersion: "cancun" }
       }
     ]
   },
