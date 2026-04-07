@@ -22,6 +22,16 @@ const userSchema = new Schema<IUser>(
       trim: true,
       maxlength: [50, 'Name cannot exceed 50 characters'],
     },
+    role: {
+      type: String,
+      enum: ['admin', 'dev', 'guest'],
+      default: 'guest',
+    },
+    status: {
+      type: String,
+      enum: ['active', 'suspended'],
+      default: 'active',
+    },
   },
   {
     timestamps: true,

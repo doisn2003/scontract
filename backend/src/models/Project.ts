@@ -77,6 +77,14 @@ const projectSchema = new Schema<IProject>(
       type: [smartContractSchema],
       default: [],
     },
+    guest_permissions: [
+      {
+        contractAddress: { type: String, required: true },
+        methodName: { type: String, required: true },
+        isGlobalAllowed: { type: Boolean, default: false },
+        allowedGuestList: { type: [String], default: [] }, // Danh sách email của khách
+      }
+    ]
   },
   {
     timestamps: true,
