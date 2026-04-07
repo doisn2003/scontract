@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { auth } from '../middleware/auth.js';
+import { requireRole } from '../middleware/roleMiddleware.js';
 import {
   // Project CRUD
   createProject,
@@ -23,22 +24,25 @@ const router = Router();
 // Tất cả routes yêu cầu xác thực
 router.use(auth);
 
+// Helper middleware for write access
+const requireDevOrAdmin = requireRole(['dev', 'admin']);
+
 // ── Project CRUD ──────────────────────────────────────────────────────────
-router.post('/', createProject);                // POST   /api/projects
+router.post('/', requireDevOrAdmin, createProject);                // POST   /api/projects
 router.get('/', getProjects);                   // GET    /api/projects
 router.get('/:id', getProject);                 // GET    /api/projects/:id
-router.patch('/:id', updateProject);             // PATCH  /api/projects/:id  (name/desc)
-router.delete('/:id', deleteProject);            // DELETE /api/projects/:id
+router.patch('/:id', requireDevOrAdmin, updateProject);             // PATCH  /api/projects/:id  (name/desc)
+router.delete('/:id', requireDevOrAdmin, deleteProject);            // DELETE /api/projects/:id
 
 // ── Contract Management (IDE Tabs) ────────────────────────────────────────
-router.post('/:id/contracts', addContract);                           // Thêm contract
-router.patch('/:id/contracts/:contractId', updateContract);           // Đổi tên / Sửa source
-router.delete('/:id/contracts/:contractId', removeContract);          // Xóa contract (min 1)
-router.put('/:id/contracts/reorder', reorderContracts);               // Sắp xếp lại thứ tự tab
+router.post('/:id/contracts', requireDevOrAdmin, addContract);                           // Thêm contract
+router.patch('/:id/contracts/:contractId', requireDevOrAdmin, updateContract);           // Đổi tên / Sửa source
+router.delete('/:id/contracts/:contractId', requireDevOrAdmin, removeContract);          // Xóa contract (min 1)
+router.put('/:id/contracts/reorder', requireDevOrAdmin, reorderContracts);               // Sắp xếp lại thứ tự tab
 
 // ── Pipeline per Contract ─────────────────────────────────────────────────
-router.post('/:id/contracts/:contractId/compile', compileContract);                // Compile
-router.post('/:id/contracts/:contractId/deploy', deployContract);                  // Deploy
-router.get('/:id/contracts/:contractId/estimate-deploy', estimateDeployGas);       // Gas estimate
+router.post('/:id/contracts/:contractId/compile', requireDevOrAdmin, compileContract);                // Compile
+router.post('/:id/contracts/:contractId/deploy', requireDevOrAdmin, deployContract);                  // Deploy
+router.get('/:id/contracts/:contractId/estimate-deploy', requireDevOrAdmin, estimateDeployGas);       // Gas estimate
 
 export default router;

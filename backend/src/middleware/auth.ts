@@ -29,10 +29,11 @@ export const auth = (req: Request, _res: Response, next: NextFunction): void => 
       throw new Error('JWT_SECRET is not configured');
     }
 
-    const decoded = jwt.verify(token, secret) as { id: string; email: string };
+    const decoded = jwt.verify(token, secret) as { id: string; email: string; role: string };
     authReq.user = {
       id: decoded.id,
       email: decoded.email,
+      role: decoded.role || 'guest',
     };
     next();
   } catch (error) {
@@ -47,7 +48,7 @@ export const auth = (req: Request, _res: Response, next: NextFunction): void => 
 /**
  * Generate a JWT token for a user.
  */
-export const generateToken = (userId: string, email: string): string => {
+export const generateToken = (userId: string, email: string, role: string = 'guest'): string => {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
     throw new Error('JWT_SECRET is not configured');
@@ -55,7 +56,7 @@ export const generateToken = (userId: string, email: string): string => {
 
   const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
   return jwt.sign(
-    { id: userId, email },
+    { id: userId, email, role },
     secret,
     { expiresIn } as jwt.SignOptions
   );

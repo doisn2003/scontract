@@ -91,6 +91,23 @@ export const getProject = async (req: Request, res: Response): Promise<void> => 
     const project = await projectService.getProjectById(projectId, userId);
     if (!project) { sendError(res, 'Project not found', 404); return; }
 
+    // Backend filtering for guest users
+    if (authReq.user?.role === 'guest') {
+      project.contracts = project.contracts.map((c: any) => {
+        if (c.abi) {
+          c.abi = c.abi.filter((fn: any) => {
+            if (fn.type !== 'function') return true; // Keep events, constructors, etc.
+            const perm = project.guest_permissions?.find((p: any) => p.contractAddress === c.contractAddress && p.methodName === fn.name);
+            if (!perm) return false;
+            if (perm.isGlobalAllowed) return true;
+            if (perm.allowedGuestList.includes(authReq.user?.email || '')) return true;
+            return false;
+          });
+        }
+        return c;
+      }) as any;
+    }
+
     sendSuccess(res, 'Project retrieved', project);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to get project';
@@ -109,7 +126,7 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
     if (!userId) { sendError(res, 'Unauthorized', 401); return; }
 
     const projectId = req.params['id'] as string;
-    const updates = req.body as { name?: string; description?: string };
+    const updates = req.body as { name?: string; description?: string; guest_permissions?: any[] };
 
     const project = await projectService.updateProject(projectId, userId, updates);
     sendSuccess(res, 'Project updated successfully', project);
