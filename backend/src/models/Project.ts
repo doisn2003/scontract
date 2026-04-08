@@ -82,9 +82,14 @@ const projectSchema = new Schema<IProject>(
         contractAddress: { type: String, required: true },
         methodName: { type: String, required: true },
         isGlobalAllowed: { type: Boolean, default: false },
-        allowedGuestList: { type: [String], default: [] }, // Danh sách email của khách
+        allowedGuestList: { type: [String], default: [] }, // Emails of allowed guests
       }
-    ]
+    ],
+    shared_devs: {
+      type: [Schema.Types.ObjectId],
+      ref: 'User',
+      default: [], // List of user IDs (Devs) allowed to view/edit
+    }
   },
   {
     timestamps: true,

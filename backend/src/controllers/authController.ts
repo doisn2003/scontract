@@ -98,6 +98,12 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // Check if account is suspended
+    if (user.status === 'suspended') {
+      sendError(res, 'Your account has been suspended. Please contact support.', 403);
+      return;
+    }
+
     // Check password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {

@@ -94,6 +94,7 @@ export interface IProject extends Document {
   network: string;
   contracts: Types.DocumentArray<ISmartContract>;
   guest_permissions: IGuestPermission[];
+  shared_devs: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }

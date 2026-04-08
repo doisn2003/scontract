@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
 import type { AuthRequest } from '../types/index.js';
 import { sendError } from '../utils/response.js';
 
@@ -8,7 +9,7 @@ import { sendError } from '../utils/response.js';
  * Verifies the Bearer token from Authorization header
  * and attaches user info to req.user.
  */
-export const auth = (req: Request, _res: Response, next: NextFunction): void => {
+export const auth = async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
   const authReq = req as AuthRequest;
 
   const authHeader = req.headers.authorization;
@@ -30,10 +31,23 @@ export const auth = (req: Request, _res: Response, next: NextFunction): void => 
     }
 
     const decoded = jwt.verify(token, secret) as { id: string; email: string; role: string };
+    
+    // Check if user still exists and is not suspended
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      sendError(_res, 'User no longer exists.', 401);
+      return;
+    }
+
+    if (user.status === 'suspended') {
+      sendError(_res, 'Account suspended. Please contact support.', 403);
+      return;
+    }
+
     authReq.user = {
-      id: decoded.id,
-      email: decoded.email,
-      role: decoded.role || 'guest',
+      id: user._id.toString(),
+      email: user.email,
+      role: user.role || 'guest',
     };
     next();
   } catch (error) {
