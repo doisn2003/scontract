@@ -17,6 +17,7 @@ import {
 import toast from 'react-hot-toast';
 import PageWrapper from '../components/Layout/PageWrapper';
 import { useMetaMask } from '../hooks/useMetaMask';
+import { useAuth } from '../context/AuthContext';
 import { parseABI, getTypeHint, parseInputValue } from '../utils/abiParser';
 import type { ParsedFunction } from '../utils/abiParser';
 import GasEstimate from '../components/Contract/GasEstimate';
@@ -32,6 +33,7 @@ export default function InteractPage() {
   const { t } = useTranslation();
   const { id, contractId } = useParams<{ id: string; contractId: string }>();
   const mm = useMetaMask();
+  const { user } = useAuth();
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabKey>('read');
@@ -59,7 +61,55 @@ export default function InteractPage() {
 
   useEffect(() => { fetchProject(); }, [fetchProject]);
 
+  useEffect(() => { fetchProject(); }, [fetchProject]);
+
   const parsedAbi = abi ? parseABI(abi) : null;
+  const isOwner = user?._id === project?.userId;
+  const isGuest = user?.role === 'guest';
+
+  const [savingPerm, setSavingPerm] = useState<string | null>(null);
+
+  const getPermission = (fnName: string) => {
+    return project?.guest_permissions?.find(p => p.contractAddress === contractAddress && p.methodName === fnName);
+  };
+
+  const handleUpdatePermission = async (fnName: string, isGlobalAllowed: boolean, guestEmails: string) => {
+    if (!id || !project || !contractAddress) return;
+    setSavingPerm(fnName);
+    try {
+      const allowedGuestList = guestEmails.split(',').map(e => e.trim()).filter(e => e);
+      let newPerms = project.guest_permissions ? [...project.guest_permissions] : [];
+      const index = newPerms.findIndex(p => p.contractAddress === contractAddress && p.methodName === fnName);
+      
+      const updatedPerm = { contractAddress, methodName: fnName, isGlobalAllowed, allowedGuestList };
+      if (index >= 0) {
+        newPerms[index] = updatedPerm;
+      } else {
+        newPerms.push(updatedPerm);
+      }
+
+      const res = await api.patch(`/projects/${id}`, { guest_permissions: newPerms });
+      if (res.data?.success) {
+        setProject(res.data.data);
+        toast.success('Permissions updated');
+      }
+    } catch {
+      toast.error('Failed to update permissions');
+    } finally {
+      setSavingPerm(null);
+    }
+  };
+
+  const filterFunctions = (funcs: ParsedFunction[]) => {
+    if (!isGuest) return funcs;
+    return funcs.filter(fn => {
+      const p = getPermission(fn.name);
+      if (!p) return false;
+      if (p.isGlobalAllowed) return true;
+      if (p.allowedGuestList.includes(user?.email || '')) return true;
+      return false;
+    });
+  };
 
   // Generate tab counts
   const tabCounts: Record<TabKey, number> = {
@@ -206,7 +256,10 @@ export default function InteractPage() {
   // Network warning
   const networkWarning = mm.isConnected && !mm.isCorrectNetwork;
 
-  const renderFunctionCard = (fn: ParsedFunction, isWrite: boolean) => (
+  const renderFunctionCard = (fn: ParsedFunction, isWrite: boolean) => {
+    const perm = getPermission(fn.name);
+    
+    return (
     <div key={fn.name} className="fn-card">
       <div className="fn-card-header">
         <span className="fn-name mono">{fn.name}</span>
@@ -214,6 +267,33 @@ export default function InteractPage() {
           {fn.stateMutability}
         </span>
       </div>
+
+      {isOwner && (
+        <div className="fn-permissions" style={{ padding: '0.5rem', background: '#0f172a', margin: '0.5rem 0', borderRadius: '4px', border: '1px solid #334155' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+            <label style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>Allow All Guests</label>
+            <input 
+              type="checkbox" 
+              checked={perm ? perm.isGlobalAllowed : false}
+              onChange={(e) => handleUpdatePermission(fn.name, e.target.checked, perm?.allowedGuestList?.join(', ') || '')}
+              disabled={savingPerm === fn.name}
+            />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <label style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>Allowed Guest Emails (comma separated)</label>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <input 
+                className="input"
+                style={{ flex: 1, padding: '0.25rem 0.5rem', fontSize: '0.85rem' }}
+                defaultValue={perm?.allowedGuestList?.join(', ') || ''}
+                onBlur={(e) => handleUpdatePermission(fn.name, perm ? perm.isGlobalAllowed : false, e.target.value)}
+                disabled={savingPerm === fn.name}
+              />
+              {savingPerm === fn.name && <span className="spinner" style={{ width: 14, height: 14, alignSelf: 'center' }} />}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Inputs */}
       {fn.inputs.length > 0 && (
@@ -322,9 +402,9 @@ export default function InteractPage() {
         </div>
       )}
     </div>
-  );
+  )};
 
-  const currentFunctions = parsedAbi?.functions[activeTab] ?? [];
+  const currentFunctions = filterFunctions(parsedAbi?.functions[activeTab] ?? []);
 
   return (
     <PageWrapper

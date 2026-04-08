@@ -28,6 +28,8 @@ import ExplorePage from './pages/ExplorePage';
 import InteractPage from './pages/InteractPage';
 import TestPage from './pages/TestPage';
 import TransactionHistoryPage from './pages/TransactionHistoryPage';
+import AdminUsersPage from './pages/AdminUsersPage';
+import AdminConfigsPage from './pages/AdminConfigsPage';
 
 /**
  * Layout wrapper that includes Navbar + Sidebar for authenticated pages
@@ -49,6 +51,19 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 function ProtectedPage({ children }: { children: React.ReactNode }) {
   return (
     <ProtectedRoute>
+      <AppLayout>
+        {children}
+      </AppLayout>
+    </ProtectedRoute>
+  );
+}
+
+/**
+ * Protected page with role restrictions
+ */
+function RoleProtectedPage({ children, allowedRoles }: { children: React.ReactNode; allowedRoles: string[] }) {
+  return (
+    <ProtectedRoute allowedRoles={allowedRoles}>
       <AppLayout>
         {children}
       </AppLayout>
@@ -89,13 +104,17 @@ function AppRoutes() {
       {/* Protected routes */}
       <Route path="/dashboard" element={<ProtectedPage><DashboardPage /></ProtectedPage>} />
       <Route path="/wallets" element={<ProtectedPage><WalletsPage /></ProtectedPage>} />
-      <Route path="/projects/create" element={<ProtectedPage><CreateProjectPage /></ProtectedPage>} />
+      <Route path="/projects/create" element={<RoleProtectedPage allowedRoles={['dev', 'admin']}><CreateProjectPage /></RoleProtectedPage>} />
       <Route path="/projects" element={<ProtectedPage><ProjectListPage /></ProtectedPage>} />
       <Route path="/projects/:id" element={<ProtectedPage><ProjectDetailPage /></ProtectedPage>} />
       <Route path="/projects/:id/contracts/:contractId/interact" element={<ProtectedPage><InteractPage /></ProtectedPage>} />
       <Route path="/projects/:id/contracts/:contractId/test" element={<ProtectedPage><TestPage /></ProtectedPage>} />
       <Route path="/explore" element={<ProtectedPage><ExplorePage /></ProtectedPage>} />
       <Route path="/transactions" element={<ProtectedPage><TransactionHistoryPage /></ProtectedPage>} />
+
+      {/* Admin routes */}
+      <Route path="/admin/users" element={<RoleProtectedPage allowedRoles={['admin']}><AdminUsersPage /></RoleProtectedPage>} />
+      <Route path="/admin/configs" element={<RoleProtectedPage allowedRoles={['admin']}><AdminConfigsPage /></RoleProtectedPage>} />
 
       {/* Default redirect */}
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

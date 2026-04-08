@@ -15,6 +15,8 @@ export interface User {
   _id: string;
   email: string;
   name: string;
+  role: string;
+  status: string;
   createdAt: string;
 }
 
@@ -52,6 +54,13 @@ export interface Wallet {
 // --- Project ---
 export type ProjectStatus = 'created' | 'compiled' | 'deployed';
 
+export interface IGuestPermission {
+  contractAddress: string;
+  methodName: string;
+  isGlobalAllowed: boolean;
+  allowedGuestList: string[];
+}
+
 export interface SmartContract {
   _id: string;
   name: string;
@@ -72,6 +81,7 @@ export interface Project {
   name: string;
   description: string;
   contracts: SmartContract[];
+  guest_permissions: IGuestPermission[];
   network: string;
   createdAt: string;
   updatedAt: string;

@@ -11,7 +11,7 @@ export async function requestFaucet(targetAddress: string, ipAddress: string) {
   const limitConfig = await SystemConfig.findOne({ key: 'faucet_native_limit' });
   const maxConfig = await SystemConfig.findOne({ key: 'faucet_daily_max' });
   
-  const amount = limitConfig?.value || process.env.FAUCET_AMOUNT || '0.05';
+  const amount = limitConfig?.value || process.env.FAUCET_AMOUNT || '0.001';
   const dailyMax = parseInt(maxConfig?.value || '5', 10);
   
   const cooldownHours = 24; // Check within 24h window

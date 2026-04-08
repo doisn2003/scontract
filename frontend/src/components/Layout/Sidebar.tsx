@@ -8,12 +8,14 @@ import {
   HiOutlineGlobeAlt,
   HiOutlineClock,
   HiOutlineArrowRightOnRectangle,
+  HiOutlineUsers,
+  HiOutlineCog6Tooth,
 } from 'react-icons/hi2';
 import { useAuth } from '../../context/AuthContext';
 import './Sidebar.css';
 
 export default function Sidebar() {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const { t } = useTranslation();
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -38,14 +40,18 @@ export default function Sidebar() {
       <div className="sidebar-section">
         <div className="sidebar-section-title">{t('nav.projects.title')}</div>
         <nav className="sidebar-nav">
-          <NavLink to="/projects/create" className={linkClass}>
-            <span className="sidebar-icon"><HiOutlinePlusCircle /></span>
-            {t('nav.projects.new')}
-          </NavLink>
-          <NavLink to="/projects" className={linkClass}>
-            <span className="sidebar-icon"><HiOutlineFolder /></span>
-            {t('nav.projects.my_projects')}
-          </NavLink>
+          {user?.role !== 'guest' && (
+            <>
+              <NavLink to="/projects/create" className={linkClass}>
+                <span className="sidebar-icon"><HiOutlinePlusCircle /></span>
+                {t('nav.projects.new')}
+              </NavLink>
+              <NavLink to="/projects" className={linkClass}>
+                <span className="sidebar-icon"><HiOutlineFolder /></span>
+                {t('nav.projects.my_projects')}
+              </NavLink>
+            </>
+          )}
           <NavLink to="/explore" className={linkClass}>
             <span className="sidebar-icon"><HiOutlineGlobeAlt /></span>
             {t('nav.projects.explore')}
@@ -62,6 +68,22 @@ export default function Sidebar() {
           </NavLink>
         </nav>
       </div>
+
+      {user?.role === 'admin' && (
+        <div className="sidebar-section">
+          <div className="sidebar-section-title">{t('nav.admin.title')}</div>
+          <nav className="sidebar-nav">
+            <NavLink to="/admin/users" className={linkClass} title={t('nav.admin.users')}>
+              <span className="sidebar-icon"><HiOutlineUsers /></span>
+              {t('nav.admin.users')}
+            </NavLink>
+            <NavLink to="/admin/configs" className={linkClass} title={t('nav.admin.configs')}>
+              <span className="sidebar-icon"><HiOutlineCog6Tooth /></span>
+              {t('nav.admin.configs')}
+            </NavLink>
+          </nav>
+        </div>
+      )}
 
       <div className="sidebar-spacer" />
 
