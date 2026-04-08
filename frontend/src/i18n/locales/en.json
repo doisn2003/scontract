@@ -107,6 +107,11 @@
     "activity": "Activity",
     "transactions": "Transactions",
     "interact": "Interact",
+    "admin": {
+      "title": "Admin Control",
+      "users": "User Accounts",
+      "configs": "System Settings"
+    },
     "logout": "Logout"
   },
   "common": {
@@ -116,11 +121,57 @@
     "success": "Success",
     "cancel": "Cancel",
     "save": "Save",
+    "of": "of",
+    "saved": "Saved",
+    "next": "Next",
+    "previous": "Previous",
+    "you": "(You)",
+    "error_fetch": "Failed to fetch data",
     "errors": {
       "constructor_mismatch": "The number of arguments for the Constructor does not match the contract definition. Please check again."
     },
     "status": "Status",
     "actions": "Actions"
+  },
+  "admin": {
+    "users": {
+      "title": "User Management",
+      "subtitle": "Supervise platform members, assign roles, and manage account statuses.",
+      "search_placeholder": "Search by email or name...",
+      "all_roles": "All Roles",
+      "col_profile": "User Profile",
+      "col_contact": "Contact",
+      "col_access": "Access Level",
+      "col_status": "System Status",
+      "col_joined": "Joined Date",
+      "no_users": "No users matching your criteria were found.",
+      "showing": "Showing",
+      "role_updated": "User role updated",
+      "role_update_failed": "Failed to update role",
+      "status_updated": "User status updated",
+      "status_update_failed": "Failed to update status"
+    },
+    "configs": {
+      "title": "System Configurations",
+      "subtitle": "Manage global system settings, Faucet limits, and master configurations.",
+      "info_title": "Critical Configuration Notes",
+      "faucet_native_desc": "Amount of tBNB sent per request (e.g., 0.001).",
+      "faucet_daily_desc": "Maximum requests allowed per user/IP address per 24 hours.",
+      "change_notice": "Changes are applied immediately to the Faucet service. Use with caution.",
+      "active_settings": "Active Settings",
+      "refresh": "Refresh List",
+      "col_key": "Configuration Key",
+      "col_value": "Value",
+      "col_status": "Status",
+      "no_configs": "No configurations found. Add your first setting below.",
+      "tag_faucet": "Faucet",
+      "add_title": "Add New Parameter",
+      "label_key": "Parameter Key",
+      "placeholder_key": "e.g. max_file_size",
+      "label_value": "Parameter Value",
+      "placeholder_value": "Value...",
+      "btn_create": "Create Parameter"
+    }
   },
   "dashboard": {
     "greeting": "Welcome back",

@@ -10,8 +10,7 @@ import projectRoutes from './routes/projectRoutes.js';
 import exploreRoutes from './routes/exploreRoutes.js';
 import testRoutes from './routes/testRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
-
-
+import adminRoutes from './routes/adminRoutes.js';
 dotenv.config();
 
 const app = express();
@@ -32,6 +31,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/explore', exploreRoutes);
 app.use('/api/tests', testRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check
 app.get('/', (_req, res) => {

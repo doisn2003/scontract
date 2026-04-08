@@ -9,9 +9,36 @@ import { sendSuccess, sendError } from '../utils/response.js';
  */
 export const getUsers = async (req: Request, res: Response): Promise<void> => {
   try {
-    const filter = req.query.role ? { role: req.query.role } : {};
-    const users = await User.find(filter).select('-password').sort({ createdAt: -1 });
-    sendSuccess(res, 'Users retrieved', { users });
+    const role = req.query.role as string;
+    const search = req.query.search as string;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    const query: any = {};
+    if (role) query.role = role;
+    if (search) {
+      query.$or = [
+        { email: { $regex: search, $options: 'i' } },
+        { name: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const total = await User.countDocuments(query);
+    const users = await User.find(query)
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    sendSuccess(res, 'Users retrieved', { 
+      users,
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit)
+      }
+    });
   } catch (error) {
     sendError(res, 'Failed to get users', 500);
   }
@@ -27,6 +54,12 @@ export const updateUserRole = async (req: Request, res: Response): Promise<void>
 
     if (!['admin', 'dev', 'guest'].includes(role)) {
       sendError(res, 'Invalid role', 400);
+      return;
+    }
+
+    // Security: Prevent self-lockout
+    if (id === (req as any).user?._id) {
+      sendError(res, 'You cannot modify your own administrative role', 400);
       return;
     }
 
@@ -52,6 +85,12 @@ export const updateUserStatus = async (req: Request, res: Response): Promise<voi
 
     if (!['active', 'suspended'].includes(status)) {
       sendError(res, 'Invalid status', 400);
+      return;
+    }
+
+    // Security: Prevent self-lockout
+    if (id === (req as any).user?._id) {
+      sendError(res, 'You cannot suspend your own account', 400);
       return;
     }
 

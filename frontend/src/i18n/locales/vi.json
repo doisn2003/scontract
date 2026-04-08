@@ -106,6 +106,11 @@
     "activity": "Hoạt động",
     "transactions": "Giao dịch",
     "interact": "Interact",
+    "admin": {
+      "title": "Quản trị hệ thống",
+      "users": "Quản lý người dùng",
+      "configs": "Cấu hình hệ thống"
+    },
     "logout": "Đăng xuất"
   },
   "common": {
@@ -115,11 +120,57 @@
     "success": "Thành công",
     "cancel": "Hủy",
     "save": "Lưu",
+    "of": "trên",
+    "saved": "Đã lưu",
+    "next": "Kế tiếp",
+    "previous": "Trước đó",
+    "you": "(Bạn)",
+    "error_fetch": "Lỗi tải dữ liệu",
     "errors": {
       "constructor_mismatch": "Số lượng tham số cho Constructor không khớp với định nghĩa trong hợp đồng. Vui lòng kiểm tra lại."
     },
     "status": "Trạng thái",
     "actions": "Hành động"
+  },
+  "admin": {
+    "users": {
+      "title": "Quản lý người dùng",
+      "subtitle": "Giám sát thành viên, phân quyền và quản lý trạng thái tài khoản.",
+      "search_placeholder": "Tìm theo email hoặc tên...",
+      "all_roles": "Tất cả vai trò",
+      "col_profile": "Hồ sơ người dùng",
+      "col_contact": "Liên hệ",
+      "col_access": "Cấp độ truy cập",
+      "col_status": "Trạng thái hệ thống",
+      "col_joined": "Ngày tham gia",
+      "no_users": "Không tìm thấy người dùng nào khớp với tiêu chí.",
+      "showing": "Đang hiển thị",
+      "role_updated": "Đã cập nhật vai trò người dùng",
+      "role_update_failed": "Cập nhật vai trò thất bại",
+      "status_updated": "Đã cập nhật trạng thái người dùng",
+      "status_update_failed": "Cập nhật trạng thái thất bại"
+    },
+    "configs": {
+      "title": "Cấu hình hệ thống",
+      "subtitle": "Quản lý cài đặt hệ thống, giới hạn Faucet và cấu hình master.",
+      "info_title": "Lưu ý cấu hình quan trọng",
+      "faucet_native_desc": "Số lượng tBNB gửi mỗi yêu cầu (VD: 0.001).",
+      "faucet_daily_desc": "Số yêu cầu tối đa cho mỗi người dùng/IP trong 24 giờ.",
+      "change_notice": "Các thay đổi sẽ có hiệu lực ngay lập tức. Hãy thận trọng.",
+      "active_settings": "Cài đặt đang hoạt động",
+      "refresh": "Làm mới danh sách",
+      "col_key": "Khóa cấu hình",
+      "col_value": "Giá trị",
+      "col_status": "Trạng thái",
+      "no_configs": "Không tìm thấy cấu hình nào. Hãy thêm cài đặt đầu tiên.",
+      "tag_faucet": "Faucet",
+      "add_title": "Thêm tham số mới",
+      "label_key": "Khóa tham số",
+      "placeholder_key": "VD: max_file_size",
+      "label_value": "Giá trị tham số",
+      "placeholder_value": "Giá trị...",
+      "btn_create": "Tạo tham số"
+    }
   },
   "dashboard": {
     "greeting": "Chào mừng bạn trở lại",
