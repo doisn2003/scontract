@@ -879,16 +879,21 @@ export default function InteractPage() {
                     {currentFunctions.map(fn => {
                       const perm = getPermission(fn.name);
                       const isOverridden = isOverriddenByGlobal(fn);
+                      const isSaving = savingPerm === fn.name;
+
                       return (
-                        <div key={fn.name} className="fn-note-card">
-                          <div className="fn-note-header">{fn.name}</div>
+                        <div key={fn.name} className={`fn-note-card ${isSaving ? 'saving' : ''}`}>
+                          <div className="fn-note-header">
+                            <span>{fn.name}</span>
+                            {isSaving && <span className="fn-saving-tag">{t('common.saving')}...</span>}
+                          </div>
 
                           {isOverridden ? (
                             <div style={{ fontSize: '12px', color: 'var(--color-accent)', padding: '0.25rem 0' }}>
-                              ⚡ Inheriting from Global Access Control
+                              ⚡ {t('pages.interact.config.global_inherit_warn') || 'Inheriting from Global Access Control'}
                             </div>
                           ) : (
-                            <div className="config-toggle-row" style={{ padding: 0, border: 'none' }}>
+                            <div className="config-toggle-row" style={{ padding: 0, border: 'none', opacity: isSaving ? 0.5 : 1 }}>
                               <div className="config-toggle-info">
                                 <span className="config-toggle-label" style={{ fontSize: '13px' }}>{t('pages.interact.config.allow_fn')}</span>
                               </div>
@@ -902,6 +907,7 @@ export default function InteractPage() {
                             className="fn-note-textarea"
                             placeholder={t('pages.interact.config.notes_placeholder')}
                             defaultValue={perm?.note || ''}
+                            disabled={isSaving}
                             onBlur={(e) => handleUpdatePermission(fn.name, perm?.isGlobalAllowed || false, '', e.target.value)}
                           ></textarea>
                         </div>

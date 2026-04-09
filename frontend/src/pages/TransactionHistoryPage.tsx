@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   HiOutlineArrowTopRightOnSquare,
   HiOutlineDocumentDuplicate,
@@ -143,7 +143,7 @@ export default function TransactionHistoryPage() {
                     const projectId = getProjectId(tx);
                     const projectName = getProjectName(tx);
                     const contractName = getContractName(tx);
-                    const interactUrl = tx.contractId 
+                    const interactUrl = tx.contractId
                       ? `/projects/${projectId}/contracts/${tx.contractId}/interact`
                       : `/projects/${projectId}/interact`;
 
