@@ -92,6 +92,50 @@
         "write": "Write",
         "payable": "Payable"
       },
+      "config": {
+        "global": "GLOBAL PERMISSIONS",
+        "notes": "FUNCTION NOTES",
+        "admission_guests": "GUEST ADMISSION",
+        "admission_guests_desc": "Invite guests by email. They still need function-level access below.",
+        "admission_devs": "DEVELOPER ADMISSION",
+        "admission_devs_desc": "Developers get full access once admitted.",
+        "invite_guests": "INVITE GUEST USERS",
+        "invite_devs": "INVITE DEVELOPERS",
+        "email_placeholder": "guest@organization.com",
+        "dev_email_placeholder": "dev@crypto-lab.io",
+        "btn_invite": "INVITE",
+        "allow_all": "Allow All",
+        "allow_fn": "Allow",
+        "global_inherit_warn": "Inheriting from Global Access Control",
+        "global_access": "GUEST FUNCTION ACCESS",
+        "global_access_desc": "Choose which function types guests can use",
+        "read_access": "Read Functions",
+        "read_desc": "view / pure — data queries",
+        "write_access": "Write Functions",
+        "write_desc": "nonpayable — state mutations",
+        "payable_access": "Payable Functions",
+        "payable_desc": "payable — BNB value transfers",
+        "fn_permissions": "Function Permissions",
+        "fn_notes": "Function Notes",
+        "notes_placeholder": "Explain how this function works (Markdown supported)...",
+        "no_guests_yet": "No guests invited yet.",
+        "no_devs_yet": "No developers invited yet.",
+        "remove": "Remove",
+        "revoke_all_guests_title": "Revoke All Guests?",
+        "revoke_all_guests_msg": "Turning off \"Allow All\" will remove ALL invited guests. This cannot be undone.",
+        "revoke_all_devs_title": "Revoke All Developers?",
+        "revoke_all_devs_msg": "Turning off \"Allow All\" will remove ALL shared developers. This cannot be undone.",
+        "confirm_revoke": "Yes, Revoke All",
+        "cancel_revoke": "Cancel",
+        "all_revoked_guests": "All guest invitations have been revoked.",
+        "all_revoked_devs": "All developer access has been revoked."
+      },
+      "unauthorized": {
+        "title": "Access Restricted",
+        "msg": "It appears you do not have the required permissions to access this smart contract. This environment is exclusive to authorized developers and invited guests.",
+        "contact_prefix": "If you believe this is a mistake, please reach out to us at:",
+        "back_to_dashboard": "Return to Dashboard"
+      },
       "empty": "No {{type}} functions found in this contract."
     }
   },
@@ -107,20 +151,72 @@
     "activity": "Activity",
     "transactions": "Transactions",
     "interact": "Interact",
+    "admin": {
+      "title": "Admin Control",
+      "users": "User Accounts",
+      "configs": "System Settings"
+    },
     "logout": "Logout"
   },
   "common": {
+    "saving": "Saving",
     "search": "Search...",
     "loading": "Loading...",
     "error": "Error",
     "success": "Success",
     "cancel": "Cancel",
     "save": "Save",
+    "of": "of",
+    "saved": "Saved",
+    "next": "Next",
+    "previous": "Previous",
+    "you": "(You)",
+    "error_fetch": "Failed to fetch data",
     "errors": {
       "constructor_mismatch": "The number of arguments for the Constructor does not match the contract definition. Please check again."
     },
     "status": "Status",
     "actions": "Actions"
+  },
+  "admin": {
+    "users": {
+      "title": "User Management",
+      "subtitle": "Supervise platform members, assign roles, and manage account statuses.",
+      "search_placeholder": "Search by email or name...",
+      "all_roles": "All Roles",
+      "col_profile": "User Profile",
+      "col_contact": "Contact",
+      "col_access": "Access Level",
+      "col_status": "System Status",
+      "col_joined": "Joined Date",
+      "no_users": "No users matching your criteria were found.",
+      "showing": "Showing",
+      "role_updated": "User role updated",
+      "role_update_failed": "Failed to update role",
+      "status_updated": "User status updated",
+      "status_update_failed": "Failed to update status"
+    },
+    "configs": {
+      "title": "System Configurations",
+      "subtitle": "Manage global system settings, Faucet limits, and master configurations.",
+      "info_title": "Critical Configuration Notes",
+      "faucet_native_desc": "Amount of tBNB sent per request (e.g., 0.001).",
+      "faucet_daily_desc": "Maximum requests allowed per user/IP address per 24 hours.",
+      "change_notice": "Changes are applied immediately to the Faucet service. Use with caution.",
+      "active_settings": "Active Settings",
+      "refresh": "Refresh List",
+      "col_key": "Configuration Key",
+      "col_value": "Value",
+      "col_status": "Status",
+      "no_configs": "No configurations found. Add your first setting below.",
+      "tag_faucet": "Faucet",
+      "add_title": "Add New Parameter",
+      "label_key": "Parameter Key",
+      "placeholder_key": "e.g. max_file_size",
+      "label_value": "Parameter Value",
+      "placeholder_value": "Value...",
+      "btn_create": "Create Parameter"
+    }
   },
   "dashboard": {
     "greeting": "Welcome back",
@@ -162,4 +258,3 @@
     "deployer": "Deployer"
   }
 }
-

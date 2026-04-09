@@ -8,6 +8,7 @@ export interface AuthRequest extends Request {
   user?: {
     id: string;
     email: string;
+    role: string;
   };
 }
 
@@ -40,6 +41,8 @@ export interface IUser extends Document {
   email: string;
   password: string;
   name: string;
+  role: string;
+  status: string;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -72,6 +75,22 @@ export interface ISmartContract extends Document {
   updatedAt: Date;
 }
 
+export interface IGuestPermission {
+  contractAddress: string;
+  methodName: string;
+  isGlobalAllowed: boolean;
+  allowedGuestList: string[];
+  note: string;
+}
+
+export interface IGlobalAccessConfig {
+  invited_guests: string[];
+  allow_all_guests: boolean;
+  allow_all_devs: boolean;
+  allow_read: boolean;
+  allow_write: boolean;
+  allow_payable: boolean;
+}
 
 // ========================
 // Project
@@ -84,6 +103,9 @@ export interface IProject extends Document {
   description: string;
   network: string;
   contracts: Types.DocumentArray<ISmartContract>;
+  guest_permissions: IGuestPermission[];
+  global_access_config: IGlobalAccessConfig;
+  shared_devs: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }

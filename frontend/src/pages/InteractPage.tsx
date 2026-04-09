@@ -12,19 +12,23 @@ import {
   HiOutlineEye,
   HiOutlinePencilSquare,
   HiOutlineCurrencyDollar,
-  HiOutlineUser,
+  HiOutlineUser
 } from 'react-icons/hi2';
 import toast from 'react-hot-toast';
 import PageWrapper from '../components/Layout/PageWrapper';
 import { useMetaMask } from '../hooks/useMetaMask';
+import { useAuth } from '../context/AuthContext';
 import { parseABI, getTypeHint, parseInputValue } from '../utils/abiParser';
 import type { ParsedFunction } from '../utils/abiParser';
 import GasEstimate from '../components/Contract/GasEstimate';
 import api from '../services/api';
 import type { ApiResponse, Project } from '../types';
 import './InteractPage.css';
-
-
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm'; 
+import UnauthorizedPage from './UnauthorizedPage';
+import ConfigSidebar from '../components/Contract/ConfigSidebar';
+import { HiOutlineCog6Tooth } from 'react-icons/hi2';
 
 type TabKey = 'read' | 'write' | 'payable';
 
@@ -32,8 +36,10 @@ export default function InteractPage() {
   const { t } = useTranslation();
   const { id, contractId } = useParams<{ id: string; contractId: string }>();
   const mm = useMetaMask();
+  const { user } = useAuth();
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasAccess, setHasAccess] = useState(true);
   const [activeTab, setActiveTab] = useState<TabKey>('read');
 
   const activeContract = project?.contracts?.find(c => c._id === contractId) || project?.contracts?.[0];
@@ -48,10 +54,18 @@ export default function InteractPage() {
   const fetchProject = useCallback(async () => {
     if (!id) return;
     try {
+      setIsLoading(true);
       const { data } = await api.get<ApiResponse<Project>>(`/projects/${id}`);
-      if (data.success && data.data) setProject(data.data);
-    } catch {
-      toast.error('Failed to load project');
+      if (data.success && data.data) {
+        setProject(data.data);
+        setHasAccess(true);
+      }
+    } catch (err: any) {
+      if (err.response?.status === 404 || err.response?.status === 403) {
+        setHasAccess(false);
+      } else {
+        toast.error('Failed to load project');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -60,6 +74,62 @@ export default function InteractPage() {
   useEffect(() => { fetchProject(); }, [fetchProject]);
 
   const parsedAbi = abi ? parseABI(abi) : null;
+  const isOwner = user?._id === project?.userId;
+  const isGuest = user?.role === 'guest';
+  const isSharedDev = project?.shared_devs?.includes(user?._id || '');
+  const hasConfigAccess = isOwner || isSharedDev;
+
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const globalConfig = project?.global_access_config || {
+    invited_guests: [], allow_all_guests: false, allow_all_devs: false, allow_read: false, allow_write: false, allow_payable: false
+  };
+
+  const getPermission = (fnName: string) => {
+    return project?.guest_permissions?.find(p => p.contractAddress === contractAddress && p.methodName === fnName);
+  };
+
+  const isOverriddenByGlobal = (fn: ParsedFunction) => {
+    if (fn.type === 'read' && globalConfig.allow_read) return true;
+    if (fn.stateMutability === 'payable' && globalConfig.allow_payable) return true;
+    if (fn.type !== 'read' && fn.stateMutability !== 'payable' && globalConfig.allow_write) return true;
+    return false;
+  };
+
+  // ── 2-Tier Access Model ──
+  // Tier 1: Admission ("ticket") — does the user have entry at all?
+  // Tier 2: Authorization — which functions can they access?
+  const filterFunctions = (funcs: ParsedFunction[]) => {
+    // Owners always see everything
+    if (isOwner) return funcs;
+
+    // Devs (shared_devs) see everything — they have full owner-like access
+    if (isSharedDev) return funcs;
+
+    // Config viewers (non-guest, non-owner, non-sharedDev but somehow here) see all
+    if (!isGuest) return funcs;
+
+    // ── Guest path: 2-tier check ──
+    // Tier 1: admission
+    const hasAdmission =
+      globalConfig.allow_all_guests ||
+      (globalConfig.invited_guests || []).includes(user?.email || '');
+
+    if (!hasAdmission) return []; // No ticket → no functions
+
+    // Tier 2: function-level authorization
+    return funcs.filter(fn => {
+      // Check global function-type toggles
+      if (isOverriddenByGlobal(fn)) return true;
+
+      // Check per-function permissions (Function Notes tab)
+      const p = getPermission(fn.name);
+      if (!p) return false;
+      if (p.isGlobalAllowed) return true;
+      if (p.allowedGuestList?.includes(user?.email || '')) return true;
+      return false;
+    });
+  };
 
   // Generate tab counts
   const tabCounts: Record<TabKey, number> = {
@@ -179,6 +249,10 @@ export default function InteractPage() {
     );
   }
 
+  if (!hasAccess) {
+    return <UnauthorizedPage />;
+  }
+
   if (!project || project.contracts.length === 0) {
     return <Navigate to="/projects" replace />;
   }
@@ -206,222 +280,265 @@ export default function InteractPage() {
   // Network warning
   const networkWarning = mm.isConnected && !mm.isCorrectNetwork;
 
-  const renderFunctionCard = (fn: ParsedFunction, isWrite: boolean) => (
-    <div key={fn.name} className="fn-card">
-      <div className="fn-card-header">
-        <span className="fn-name mono">{fn.name}</span>
-        <span className={`badge ${fn.type === 'read' ? 'badge-info' : fn.type === 'payable' ? 'badge-error' : 'badge-warning'}`}>
-          {fn.stateMutability}
-        </span>
-      </div>
+  const renderFunctionCard = (fn: ParsedFunction, isWrite: boolean) => {
+    const perm = getPermission(fn.name);
 
-      {/* Inputs */}
-      {fn.inputs.length > 0 && (
-        <div className="fn-inputs">
-          {fn.inputs.map(inp => (
-            <div key={inp.name} className="fn-input-row">
-              <label className="fn-input-label">
-                {inp.name} <span className="fn-input-type">({inp.type})</span>
-              </label>
-              <input
-                className="input"
-                placeholder={getTypeHint(inp.type)}
-                value={inputValues[fn.name]?.[inp.name] ?? ''}
-                onChange={(e) => setInput(fn.name, inp.name, e.target.value)}
-              />
-            </div>
-          ))}
+    return (
+      <div key={fn.name} className="fn-card">
+        <div className="fn-card-header">
+          <span className="fn-name mono">{fn.name}</span>
+          <span className={`badge ${fn.type === 'read' ? 'badge-info' : fn.type === 'payable' ? 'badge-error' : 'badge-warning'}`}>
+            {fn.stateMutability}
+          </span>
         </div>
-      )}
 
-      {/* Payable value input */}
-      {fn.stateMutability === 'payable' && (
-        <div className="fn-input-row">
-          <label className="fn-input-label">
-            Value <span className="fn-input-type">(BNB)</span>
-          </label>
-          <input
-            className="input"
-            placeholder="0.01"
-            value={inputValues[fn.name]?.['__value'] ?? ''}
-            onChange={(e) => setInput(fn.name, '__value', e.target.value)}
-          />
-        </div>
-      )}
+        {/* Inputs */}
+        {fn.inputs.length > 0 && (
+          <div className="fn-inputs">
+            {fn.inputs.map(inp => (
+              <div key={inp.name} className="fn-input-row">
+                <label className="fn-input-label">
+                  {inp.name} <span className="fn-input-type">({inp.type})</span>
+                </label>
+                <input
+                  className="input"
+                  placeholder={getTypeHint(inp.type)}
+                  value={inputValues[fn.name]?.[inp.name] ?? ''}
+                  onChange={(e) => setInput(fn.name, inp.name, e.target.value)}
+                />
+              </div>
+            ))}
+          </div>
+        )}
 
-      {/* Action Button + Gas Estimate */}
-      <div className="fn-action-row">
-        <button
-          className={`btn ${isWrite ? 'btn-primary' : 'btn-secondary'} fn-btn`}
-          onClick={() => isWrite
-            ? handleWrite(fn, inputValues[fn.name]?.['__value'])
-            : handleRead(fn)
-          }
-          disabled={loadingFn[fn.name]}
-        >
-          {loadingFn[fn.name] ? (
-            <><span className="spinner" style={{ width: 14, height: 14 }} /> Processing...</>
-          ) : isWrite ? (
-            <><HiOutlinePlay /> Execute</>
-          ) : (
-            <><HiOutlineArrowPath /> Query</>
+        {/* Payable value input */}
+        {fn.stateMutability === 'payable' && (
+          <div className="fn-input-row">
+            <label className="fn-input-label">
+              Value <span className="fn-input-type">(BNB)</span>
+            </label>
+            <input
+              className="input"
+              placeholder="0.01"
+              value={inputValues[fn.name]?.['__value'] ?? ''}
+              onChange={(e) => setInput(fn.name, '__value', e.target.value)}
+            />
+          </div>
+        )}
+
+        {/* Action Button + Gas Estimate */}
+        <div className="fn-action-row">
+          <button
+            className={`btn ${isWrite ? 'btn-primary' : 'btn-secondary'} fn-btn`}
+            onClick={() => isWrite
+              ? handleWrite(fn, inputValues[fn.name]?.['__value'])
+              : handleRead(fn)
+            }
+            disabled={loadingFn[fn.name]}
+          >
+            {loadingFn[fn.name] ? (
+              <><span className="spinner" style={{ width: 14, height: 14 }} /> Processing...</>
+            ) : isWrite ? (
+              <><HiOutlinePlay /> Execute</>
+            ) : (
+              <><HiOutlineArrowPath /> Query</>
+            )}
+          </button>
+          {isWrite && contractAddress && abi && (
+            <GasEstimate
+              contractAddress={contractAddress}
+              abi={abi as unknown[]}
+              fn={fn}
+              args={(fn.inputs || []).map(inp => {
+                const val = inputValues[fn.name]?.[inp.name] ?? '';
+                try { return parseInputValue(inp.type, val); } catch { return val; }
+              })}
+              payableValue={inputValues[fn.name]?.['__value']}
+              isWrite={isWrite}
+            />
           )}
-        </button>
-        {isWrite && contractAddress && abi && (
-          <GasEstimate
-            contractAddress={contractAddress}
-            abi={abi as unknown[]}
-            fn={fn}
-            args={(fn.inputs || []).map(inp => {
-              const val = inputValues[fn.name]?.[inp.name] ?? '';
-              try { return parseInputValue(inp.type, val); } catch { return val; }
-            })}
-            payableValue={inputValues[fn.name]?.['__value']}
-            isWrite={isWrite}
-          />
+        </div>
+
+        {/* Result */}
+        {results[fn.name] && (
+          <div className={`fn-result ${results[fn.name].error ? 'error' : 'success'}`}>
+            {results[fn.name].value !== undefined && (
+              <div className="fn-result-value">
+                <strong>Result:</strong>
+                <span className="mono">{results[fn.name].value}</span>
+              </div>
+            )}
+            {results[fn.name].txHash && (
+              <div className="fn-result-tx">
+                <strong>Tx Hash:</strong>
+                <a
+                  href={`https://testnet.bscscan.com/tx/${results[fn.name].txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mono"
+                >
+                  {results[fn.name].txHash!.slice(0, 14)}...
+                  <HiOutlineArrowTopRightOnSquare />
+                </a>
+                <button
+                  className="copy-btn"
+                  onClick={() => {
+                    navigator.clipboard.writeText(results[fn.name].txHash!);
+                    toast.success('Tx hash copied!');
+                  }}
+                >
+                  <HiOutlineDocumentDuplicate />
+                </button>
+              </div>
+            )}
+            {results[fn.name].error && (
+              <div className="fn-result-error">
+                <HiOutlineExclamationTriangle /> {results[fn.name].error}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Markdown Note (Visible to everyone if exists) */}
+        {perm?.note && (
+          <div className="fn-markdown-preview" style={{ padding: '1rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', marginTop: '0.75rem', fontSize: '0.9rem' }}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{perm.note}</ReactMarkdown>
+          </div>
         )}
       </div>
+    )
+  };
 
-      {/* Result */}
-      {results[fn.name] && (
-        <div className={`fn-result ${results[fn.name].error ? 'error' : 'success'}`}>
-          {results[fn.name].value !== undefined && (
-            <div className="fn-result-value">
-              <strong>Result:</strong>
-              <span className="mono">{results[fn.name].value}</span>
-            </div>
-          )}
-          {results[fn.name].txHash && (
-            <div className="fn-result-tx">
-              <strong>Tx Hash:</strong>
-              <a
-                href={`https://testnet.bscscan.com/tx/${results[fn.name].txHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mono"
-              >
-                {results[fn.name].txHash!.slice(0, 14)}...
-                <HiOutlineArrowTopRightOnSquare />
-              </a>
-              <button
-                className="copy-btn"
-                onClick={() => {
-                  navigator.clipboard.writeText(results[fn.name].txHash!);
-                  toast.success('Tx hash copied!');
-                }}
-              >
-                <HiOutlineDocumentDuplicate />
-              </button>
-            </div>
-          )}
-          {results[fn.name].error && (
-            <div className="fn-result-error">
-              <HiOutlineExclamationTriangle /> {results[fn.name].error}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
 
-  const currentFunctions = parsedAbi?.functions[activeTab] ?? [];
+  const currentFunctions = filterFunctions(parsedAbi?.functions[activeTab] ?? []);
 
   return (
     <PageWrapper
       title={`${t('nav.interact')}: ${activeContract.name}`}
       subtitle={`${contractAddress.slice(0, 10)}...${contractAddress.slice(-6)} ${t('pages.dashboard.stats.network')} ${project.network}`}
     >
-      <div className="interact-page">
-        {/* Network Warning */}
-        {networkWarning && (
-          <div className="network-warning">
-            <HiOutlineExclamationTriangle />
-            <span>You are on the wrong network. Write functions require BSC Testnet (Chain ID 97).</span>
-            <button className="btn btn-sm btn-primary" onClick={mm.switchToBscTestnet}>
-              Switch Network
-            </button>
-          </div>
-        )}
-
-        {/* Contract Info Bar */}
-        <div className="contract-info-bar">
-          <div className="contract-info-rows">
-            <div className="contract-info-item">
-              <HiOutlineCodeBracket />
-              <span className="info-label">Contract Address:</span>
-              <div className="info-value">
-                <span className="mono">{contractAddress}</span>
-                <button
-                  className="copy-btn"
-                  onClick={() => {
-                    navigator.clipboard.writeText(contractAddress!);
-                    toast.success('Address copied!');
-                  }}
-                  title="Copy Address"
-                >
-                  <HiOutlineDocumentDuplicate />
+      <div className={`interact-page ${hasConfigAccess ? 'has-sidebar' : ''}`}>
+        <div className="interact-workspace">
+          {/* LEFT: MAIN CONTENT */}
+          <div className="interact-main">
+            {/* Network Warning */}
+            {networkWarning && (
+              <div className="network-warning">
+                <HiOutlineExclamationTriangle />
+                <span>You are on the wrong network. Write functions require BSC Testnet (Chain ID 97).</span>
+                <button className="btn btn-sm btn-primary" onClick={mm.switchToBscTestnet}>
+                  Switch Network
                 </button>
               </div>
-            </div>
-            <div className="contract-info-item">
-              <HiOutlineUser />
-              <span className="info-label">Owner:</span>
-              <div className="info-value">
-                <span className="mono">
-                  {typeof project.walletId === 'object' ? project.walletId.address : project.walletId}
-                </span>
-                <button
-                  className="copy-btn"
-                  onClick={() => {
-                    const addr = typeof project.walletId === 'object' ? project.walletId.address : project.walletId;
-                    navigator.clipboard.writeText(addr);
-                    toast.success('Owner address copied!');
-                  }}
-                  title="Copy Owner"
-                >
-                  <HiOutlineDocumentDuplicate />
-                </button>
-              </div>
-            </div>
-          </div>
-          <a
-            href={`https://testnet.bscscan.com/address/${contractAddress}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-ghost btn-sm"
-          >
-            <HiOutlineArrowTopRightOnSquare /> BscScan
-          </a>
-        </div>
+            )}
 
-        {/* Tabs */}
-        <div className="interact-tabs">
-          {(['read', 'write', 'payable'] as TabKey[]).map(tab => (
-            <button
-              key={tab}
-              className={`interact-tab ${activeTab === tab ? 'active' : ''}`}
-              onClick={() => setActiveTab(tab)}
-            >
-              {tab === 'read' ? (
-                <><HiOutlineEye size={18} /> {t('pages.interact.tabs.read')}</>
-              ) : tab === 'write' ? (
-                <><HiOutlinePencilSquare size={18} /> {t('pages.interact.tabs.write')}</>
+            {/* Contract Info Bar */}
+            <div className="contract-info-bar">
+              <div className="contract-info-rows">
+                <div className="contract-info-item">
+                  <HiOutlineCodeBracket />
+                  <span className="info-label">Contract Address:</span>
+                  <div className="info-value">
+                    <span className="mono">{contractAddress}</span>
+                    <button
+                      className="copy-btn"
+                      onClick={() => {
+                        navigator.clipboard.writeText(contractAddress!);
+                        toast.success('Address copied!');
+                      }}
+                      title="Copy Address"
+                    >
+                      <HiOutlineDocumentDuplicate />
+                    </button>
+                  </div>
+                </div>
+                <div className="contract-info-item">
+                  <HiOutlineUser />
+                  <span className="info-label">Owner:</span>
+                  <div className="info-value">
+                    <span className="mono">
+                      {typeof project.walletId === 'object' ? project.walletId.address : project.walletId}
+                    </span>
+                    <button
+                      className="copy-btn"
+                      onClick={() => {
+                        const addr = typeof project.walletId === 'object' ? project.walletId.address : project.walletId;
+                        navigator.clipboard.writeText(addr);
+                        toast.success('Owner address copied!');
+                      }}
+                      title="Copy Owner"
+                    >
+                      <HiOutlineDocumentDuplicate />
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <a
+                href={`https://testnet.bscscan.com/address/${contractAddress}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-ghost btn-sm"
+              >
+                <HiOutlineArrowTopRightOnSquare /> BscScan
+              </a>
+            </div>
+
+            {/* Tabs */}
+            <div className="interact-tabs">
+              {(['read', 'write', 'payable'] as TabKey[]).map(tab => (
+                <button
+                  key={tab}
+                  className={`interact-tab ${activeTab === tab ? 'active' : ''}`}
+                  onClick={() => setActiveTab(tab)}
+                >
+                  {tab === 'read' ? (
+                    <><HiOutlineEye size={18} /> {t('pages.interact.tabs.read')}</>
+                  ) : tab === 'write' ? (
+                    <><HiOutlinePencilSquare size={18} /> {t('pages.interact.tabs.write')}</>
+                  ) : (
+                    <><HiOutlineCurrencyDollar size={18} /> {t('pages.interact.tabs.payable')}</>
+                  )}
+                  <span className="tab-count">{tabCounts[tab]}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Function Cards */}
+            <div className="fn-grid">
+              {currentFunctions.length === 0 ? (
+                <div className="fn-empty">
+                  No {activeTab} functions found in this contract.
+                </div>
               ) : (
-                <><HiOutlineCurrencyDollar size={18} /> {t('pages.interact.tabs.payable')}</>
+                currentFunctions.map(fn => renderFunctionCard(fn, activeTab !== 'read'))
               )}
-              <span className="tab-count">{tabCounts[tab]}</span>
-            </button> 
-          ))}
-        </div>
-
-        {/* Function Cards */}
-        <div className="fn-grid">
-          {currentFunctions.length === 0 ? (
-            <div className="fn-empty">
-              No {activeTab} functions found in this contract.
             </div>
-          ) : (
-            currentFunctions.map(fn => renderFunctionCard(fn, activeTab !== 'read'))
+          </div>
+
+          {/* RIGHT: CONFIG SIDEBAR (Admin/Shared Dev Only) */}
+          {hasConfigAccess && isSidebarOpen && (
+            <ConfigSidebar
+              projectId={id!}
+              project={project}
+              contractAddress={contractAddress}
+              parsedAbi={parsedAbi}
+              currentFunctions={currentFunctions}
+              onProjectUpdate={setProject}
+              onClose={() => setIsSidebarOpen(false)}
+            />
+          )}
+
+          {hasConfigAccess && !isSidebarOpen && (
+            <div style={{ flex: '0 0 auto', marginTop: '1.5rem' }}>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => setIsSidebarOpen(true)}
+                style={{ position: 'sticky', top: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                <HiOutlineCog6Tooth size={20} />
+                {t('pages.interact.config.global')}
+              </button>
+            </div>
           )}
         </div>
       </div>

@@ -256,3 +256,24 @@
   color: var(--color-accent);
   background: var(--color-accent-light);
 }
+
+/* Sidebar & Workspace Layout */
+.interact-workspace {
+  display: flex;
+  gap: var(--space-6);
+  align-items: flex-start;
+}
+
+.interact-main {
+  flex: 1;
+  min-width: 0;
+}
+
+
+
+/* Adjust general interact-page if needed */
+.interact-page.has-sidebar {
+  max-width: 1200px;
+}
+
+

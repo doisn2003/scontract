@@ -55,7 +55,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     );
 
     // Generate JWT
-    const token = generateToken(user._id.toString(), user.email);
+    const token = generateToken(user._id.toString(), user.email, user.role);
 
     console.log(`[AUTH] User registered: ${user.email} (ID: ${user._id})`);
 
@@ -64,6 +64,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         _id: user._id,
         email: user.email,
         name: user.name,
+        role: user.role,
         createdAt: user.createdAt,
       },
       wallet,
@@ -97,6 +98,12 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // Check if account is suspended
+    if (user.status === 'suspended') {
+      sendError(res, 'Your account has been suspended. Please contact support.', 403);
+      return;
+    }
+
     // Check password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
@@ -105,7 +112,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Generate JWT
-    const token = generateToken(user._id.toString(), user.email);
+    const token = generateToken(user._id.toString(), user.email, user.role);
 
     console.log(`[AUTH] User logged in: ${user.email} (ID: ${user._id})`);
 
@@ -114,6 +121,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         _id: user._id,
         email: user.email,
         name: user.name,
+        role: user.role,
         createdAt: user.createdAt,
       },
       token,
@@ -148,6 +156,7 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
       _id: user._id,
       email: user.email,
       name: user.name,
+      role: user.role,
       createdAt: user.createdAt,
     });
   } catch (error) {

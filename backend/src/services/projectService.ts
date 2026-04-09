@@ -22,6 +22,18 @@ import type { ISmartContract } from '../types/index.js';
 
 const GAS_PRICE_GWEI = 1; // BSC Testnet avg gas price
 
+// Helper to find project where user is owner OR shared dev
+async function findProjectWithAuth(projectId: string, userId: string) {
+  const project = await Project.findOne({
+    _id: projectId,
+    $or: [
+      { userId },
+      { shared_devs: userId }
+    ]
+  });
+  return project;
+}
+
 // ──────────────────────────────────────────────
 // Create Project (với mảng contracts ban đầu)
 // ──────────────────────────────────────────────
@@ -71,7 +83,7 @@ export async function createProject(
 // ──────────────────────────────────────────────
 
 export async function compileContract_(projectId: string, userId: string, contractId: string) {
-  const project = await Project.findOne({ _id: projectId, userId });
+  const project = await findProjectWithAuth(projectId, userId);
   if (!project) throw new Error('Project not found');
 
   const contract = project.contracts.id(contractId);
@@ -123,7 +135,7 @@ export async function deployContract_(
   contractId: string,
   constructorArgs: unknown[] = []
 ) {
-  const project = await Project.findOne({ _id: projectId, userId });
+  const project = await findProjectWithAuth(projectId, userId);
   if (!project) throw new Error('Project not found');
 
   const contract = project.contracts.id(contractId);
@@ -215,7 +227,7 @@ export async function addContract(
   soliditySource: string,
   name?: string
 ) {
-  const project = await Project.findOne({ _id: projectId, userId });
+  const project = await findProjectWithAuth(projectId, userId);
   if (!project) throw new Error('Project not found');
 
   const detectedName = extractContractName(soliditySource);
@@ -242,7 +254,7 @@ export async function addContract(
 // ──────────────────────────────────────────────
 
 export async function removeContract(projectId: string, userId: string, contractId: string) {
-  const project = await Project.findOne({ _id: projectId, userId });
+  const project = await findProjectWithAuth(projectId, userId);
   if (!project) throw new Error('Project not found');
 
   if (project.contracts.length <= 1) {
@@ -268,7 +280,7 @@ export async function updateContract(
   contractId: string,
   updates: { name?: string; soliditySource?: string }
 ) {
-  const project = await Project.findOne({ _id: projectId, userId });
+  const project = await findProjectWithAuth(projectId, userId);
   if (!project) throw new Error('Project not found');
 
   const contract = project.contracts.id(contractId);
@@ -369,7 +381,12 @@ export async function estimateDeployGas(
 // ──────────────────────────────────────────────
 
 export async function getUserProjects(userId: string) {
-  return Project.find({ userId })
+  return Project.find({
+    $or: [
+      { userId },
+      { shared_devs: userId }
+    ]
+  })
     .select('-contracts.soliditySource -contracts.bytecode')
     .sort({ createdAt: -1 })
     .lean();
@@ -381,12 +398,38 @@ export async function getProjectById(projectId: string, userId: string) {
     .lean();
   if (!project) return null;
 
-  // Cho phép truy cập nếu là owner HOẶC có ít nhất 1 contract đã deployed (public)
-  const hasDeployed = project.contracts.some((c: any) => c.status === 'deployed');
-  if (project.userId.toString() !== userId.toString() && !hasDeployed) {
+  // Access control
+  const isOwner = project.userId.toString() === userId.toString();
+  const isSharedDev = project.shared_devs?.some((devId: any) => devId.toString() === userId.toString());
+
+  if (isOwner || isSharedDev) {
+    return project;
+  }
+
+  // Strict Evaluation for Guests/Others
+  const User = (await import('../models/User.js')).default;
+  const queryingUser = await User.findById(userId).select('email role');
+  if (!queryingUser) return null;
+
+  const globalConfig = (project as any).global_access_config || {};
+
+  if (queryingUser.role !== 'guest') {
+    if (globalConfig.allow_all_devs) return project;
     return null;
   }
-  return project;
+
+  if (globalConfig.allow_all_guests) return project;
+  
+  const userEmail = queryingUser.email;
+  if (globalConfig.invited_guests?.includes(userEmail)) return project;
+
+  const hasLocalPerm = project.guest_permissions?.some((p: any) => 
+    p.isGlobalAllowed || p.allowedGuestList?.includes(userEmail)
+  );
+
+  if (hasLocalPerm) return project;
+
+  return null;
 }
 
 export async function getDeployedProjects() {
@@ -407,20 +450,60 @@ export async function deleteProject(projectId: string, userId: string) {
 export async function updateProject(
   projectId: string,
   userId: string,
-  updates: { name?: string; description?: string }
+  updates: { 
+    name?: string; 
+    description?: string; 
+    guest_permissions?: any[]; 
+    global_access_config?: any;
+    add_shared_dev_email?: string;
+    clear_shared_devs?: boolean;
+    remove_shared_dev_id?: string;
+    remove_invited_guest?: string;
+  }
 ) {
-  const project = await Project.findOne({ _id: projectId, userId });
+  const project = await findProjectWithAuth(projectId, userId);
   if (!project) throw new Error('Project not found');
 
   if (updates.name !== undefined) project.name = updates.name;
   if (updates.description !== undefined) project.description = updates.description;
+  if (updates.guest_permissions !== undefined) project.guest_permissions = updates.guest_permissions;
+  if (updates.global_access_config !== undefined) project.global_access_config = updates.global_access_config;
+  
+  // Revoke ALL devs (clear shared_devs array)
+  if (updates.clear_shared_devs) {
+    project.shared_devs = [] as any;
+  }
+
+  // Remove a single dev by ID
+  if (updates.remove_shared_dev_id) {
+    project.shared_devs = project.shared_devs.filter(
+      (devId: any) => devId.toString() !== updates.remove_shared_dev_id
+    ) as any;
+  }
+
+  // Remove a single invited guest by email
+  if (updates.remove_invited_guest && project.global_access_config) {
+    project.global_access_config.invited_guests = (
+      project.global_access_config.invited_guests || []
+    ).filter((email: string) => email !== updates.remove_invited_guest);
+  }
+
+  if (updates.add_shared_dev_email) {
+    const User = (await import('../models/User.js')).default;
+    const devUser = await User.findOne({ email: updates.add_shared_dev_email }).select('_id');
+    if (!devUser) throw new Error('Developer email not found');
+    
+    if (!project.shared_devs.includes(devUser._id)) {
+      project.shared_devs.push(devUser._id);
+    }
+  }
 
   await project.save();
   return project;
 }
 
 export async function reorderContracts(projectId: string, userId: string, contractIds: string[]) {
-  const project = await Project.findOne({ _id: projectId, userId });
+  const project = await findProjectWithAuth(projectId, userId);
   if (!project) throw new Error('Project not found');
 
   if (contractIds.length !== project.contracts.length) {

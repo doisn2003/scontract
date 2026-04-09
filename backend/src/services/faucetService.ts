@@ -1,13 +1,20 @@
 import { ethers } from 'ethers';
 import FaucetLog from '../models/FaucetLog.js';
+import SystemConfig from '../models/SystemConfig.js';
 import { sendError } from '../utils/response.js';
 
 /**
  * Handle Faucet request: check rate limit and send funds.
  */
 export async function requestFaucet(targetAddress: string, ipAddress: string) {
-  const amount = process.env.FAUCET_AMOUNT || '0.05';
-  const cooldownHours = parseInt(process.env.FAUCET_COOLDOWN_HOURS || '24');
+  // Query configurations from DB
+  const limitConfig = await SystemConfig.findOne({ key: 'faucet_native_limit' });
+  const maxConfig = await SystemConfig.findOne({ key: 'faucet_daily_max' });
+  
+  const amount = limitConfig?.value || process.env.FAUCET_AMOUNT || '0.001';
+  const dailyMax = parseInt(maxConfig?.value || '5', 10);
+  
+  const cooldownHours = 24; // Check within 24h window
   const rpcUrl = process.env.RPC_URL;
   const masterPrivateKey = process.env.MASTER_PRIVATE_KEY;
 
@@ -19,19 +26,16 @@ export async function requestFaucet(targetAddress: string, ipAddress: string) {
   const cooldownDate = new Date();
   cooldownDate.setHours(cooldownDate.getHours() - cooldownHours);
 
-  // Check if this address or IP has requested in the last 24 hours
-  const existingLog = await FaucetLog.findOne({
+  // Check how many times this address or IP has requested in the last 24 hours
+  const requestCount = await FaucetLog.countDocuments({
     $or: [
       { targetAddress: targetAddress.toLowerCase(), requestedAt: { $gte: cooldownDate } },
       { ipAddress: ipAddress, requestedAt: { $gte: cooldownDate } },
     ],
   });
 
-  if (existingLog) {
-    const hoursLeft = Math.ceil(
-      (existingLog.requestedAt.getTime() + cooldownHours * 60 * 60 * 1000 - Date.now()) / (60 * 60 * 1000)
-    );
-    throw new Error(`Cooldown active. Please try again in ${hoursLeft} hours.`);
+  if (requestCount >= dailyMax) {
+    throw new Error(`Daily limit reached. At most ${dailyMax} requests per 24 hours.`);
   }
 
   // 2. Setup Provider and Wallet
