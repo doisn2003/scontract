@@ -12,11 +12,7 @@ import {
   HiOutlineEye,
   HiOutlinePencilSquare,
   HiOutlineCurrencyDollar,
-  HiOutlineUser,
-  HiOutlineUsers,
-  HiOutlineCommandLine,
-  HiOutlineShieldCheck,
-  HiOutlineXMark
+  HiOutlineUser
 } from 'react-icons/hi2';
 import toast from 'react-hot-toast';
 import PageWrapper from '../components/Layout/PageWrapper';
@@ -31,6 +27,9 @@ import './InteractPage.css';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm'; 
 import UnauthorizedPage from './UnauthorizedPage';
+import ConfigSidebar from '../components/Contract/ConfigSidebar';
+import { HiOutlineCog6Tooth } from 'react-icons/hi2';
+
 type TabKey = 'read' | 'write' | 'payable';
 
 export default function InteractPage() {
@@ -80,152 +79,14 @@ export default function InteractPage() {
   const isSharedDev = project?.shared_devs?.includes(user?._id || '');
   const hasConfigAccess = isOwner || isSharedDev;
 
-  const [savingPerm, setSavingPerm] = useState<string | null>(null);
-  const [configTab, setConfigTab] = useState<'global' | 'notes'>('global');
-  const [guestInviteEmail, setGuestInviteEmail] = useState('');
-  const [devInviteEmail, setDevInviteEmail] = useState('');
-  const [revokeConfirm, setRevokeConfirm] = useState<{ type: 'guests' | 'devs' } | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const globalConfig = project?.global_access_config || {
     invited_guests: [], allow_all_guests: false, allow_all_devs: false, allow_read: false, allow_write: false, allow_payable: false
   };
 
-  const handleUpdateGlobalConfig = async (updates: Partial<typeof globalConfig>, extraPatch?: Record<string, any>) => {
-    if (!id || !project) return;
-    const newConfig = { ...globalConfig, ...updates };
-    try {
-      const res = await api.patch(`/projects/${id}`, { global_access_config: newConfig, ...extraPatch });
-      if (res.data?.success) setProject(res.data.data);
-    } catch {
-      toast.error('Failed to update config');
-    }
-  };
-
-  // Handle toggling allow_all_guests with revoke confirmation
-  const handleToggleAllowAllGuests = (checked: boolean) => {
-    if (checked) {
-      // Turning ON — just enable
-      handleUpdateGlobalConfig({ allow_all_guests: true });
-    } else {
-      // Turning OFF — show confirmation (will purge invited_guests)
-      setRevokeConfirm({ type: 'guests' });
-    }
-  };
-
-  // Handle toggling allow_all_devs with revoke confirmation
-  const handleToggleAllowAllDevs = (checked: boolean) => {
-    if (checked) {
-      handleUpdateGlobalConfig({ allow_all_devs: true });
-    } else {
-      setRevokeConfirm({ type: 'devs' });
-    }
-  };
-
-  // Confirm revoke action
-  const handleConfirmRevoke = async () => {
-    if (!revokeConfirm || !id) return;
-    if (revokeConfirm.type === 'guests') {
-      await handleUpdateGlobalConfig(
-        { allow_all_guests: false, invited_guests: [] }
-      );
-      toast.success(t('pages.interact.config.all_revoked_guests'));
-    } else {
-      await handleUpdateGlobalConfig(
-        { allow_all_devs: false },
-        { clear_shared_devs: true }
-      );
-      toast.success(t('pages.interact.config.all_revoked_devs'));
-    }
-    setRevokeConfirm(null);
-  };
-
-  // Remove a single invited guest
-  const handleRemoveGuest = async (email: string) => {
-    if (!id) return;
-    try {
-      const res = await api.patch(`/projects/${id}`, { remove_invited_guest: email });
-      if (res.data?.success) {
-        setProject(res.data.data);
-        toast.success(`Removed ${email}`);
-      }
-    } catch {
-      toast.error('Failed to remove guest');
-    }
-  };
-
-  // Remove a single shared dev
-  const handleRemoveDev = async (devId: string) => {
-    if (!id) return;
-    try {
-      const res = await api.patch(`/projects/${id}`, { remove_shared_dev_id: devId });
-      if (res.data?.success) {
-        setProject(res.data.data);
-        toast.success('Developer removed');
-      }
-    } catch {
-      toast.error('Failed to remove developer');
-    }
-  };
-
-  const handleInviteDev = async () => {
-    if (!id || !devInviteEmail) return;
-    try {
-      const res = await api.patch(`/projects/${id}`, { add_shared_dev_email: devInviteEmail });
-      if (res.data?.success) {
-        setProject(res.data.data);
-        setDevInviteEmail('');
-        toast.success('Developer invited');
-      }
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to invite developer');
-    }
-  };
-
-  const handleInviteGuest = () => {
-    if (!guestInviteEmail) return;
-    const currentList = globalConfig.invited_guests || [];
-    if (!currentList.includes(guestInviteEmail)) {
-      handleUpdateGlobalConfig({ invited_guests: [...currentList, guestInviteEmail] });
-      setGuestInviteEmail('');
-      toast.success('Guest invited');
-    }
-  };
-
   const getPermission = (fnName: string) => {
     return project?.guest_permissions?.find(p => p.contractAddress === contractAddress && p.methodName === fnName);
-  };
-
-  const handleUpdatePermission = async (fnName: string, isGlobalAllowed: boolean, guestEmails: string, noteStr?: string) => {
-    if (!id || !project || !contractAddress) return;
-    setSavingPerm(fnName);
-    try {
-      const allowedGuestList = guestEmails.split(',').map(e => e.trim()).filter(e => e);
-      let newPerms = project.guest_permissions ? [...project.guest_permissions] : [];
-      const index = newPerms.findIndex(p => p.contractAddress === contractAddress && p.methodName === fnName);
-
-      const updatedPerm = {
-        contractAddress,
-        methodName: fnName,
-        isGlobalAllowed,
-        allowedGuestList,
-        note: noteStr !== undefined ? noteStr : (getPermission(fnName)?.note || '')
-      };
-
-      if (index >= 0) {
-        newPerms[index] = updatedPerm;
-      } else {
-        newPerms.push(updatedPerm);
-      }
-
-      const res = await api.patch(`/projects/${id}`, { guest_permissions: newPerms });
-      if (res.data?.success) {
-        setProject(res.data.data);
-      }
-    } catch {
-      toast.error('Failed to update permissions');
-    } finally {
-      setSavingPerm(null);
-    }
   };
 
   const isOverriddenByGlobal = (fn: ParsedFunction) => {
@@ -233,50 +94,6 @@ export default function InteractPage() {
     if (fn.stateMutability === 'payable' && globalConfig.allow_payable) return true;
     if (fn.type !== 'read' && fn.stateMutability !== 'payable' && globalConfig.allow_write) return true;
     return false;
-  };
-
-  // Destructive toggle for Guest Function Access:
-  // ON  → just enable the global toggle
-  // OFF → disable the toggle AND clear all per-function isGlobalAllowed for that function type
-  const handleToggleGlobalAccess = async (
-    configKey: 'allow_read' | 'allow_write' | 'allow_payable',
-    fnType: 'read' | 'write' | 'payable',
-    checked: boolean
-  ) => {
-    if (checked) {
-      // Turning ON — just enable
-      handleUpdateGlobalConfig({ [configKey]: true });
-    } else {
-      // Turning OFF — also reset per-function permissions for this type
-      if (!project || !contractAddress || !parsedAbi) {
-        handleUpdateGlobalConfig({ [configKey]: false });
-        return;
-      }
-
-      // Find all functions of this type
-      const fnsOfType = parsedAbi.functions[fnType] || [];
-      const fnNames = fnsOfType.map(fn => fn.name);
-
-      // Clear isGlobalAllowed for matching per-function permissions
-      const newPerms = (project.guest_permissions || []).map(p => {
-        if (p.contractAddress === contractAddress && fnNames.includes(p.methodName)) {
-          return { ...p, isGlobalAllowed: false, allowedGuestList: [] };
-        }
-        return p;
-      });
-
-      // Update both global config and per-function permissions in one call
-      const newConfig = { ...globalConfig, [configKey]: false };
-      try {
-        const res = await api.patch(`/projects/${id}`, {
-          global_access_config: newConfig,
-          guest_permissions: newPerms
-        });
-        if (res.data?.success) setProject(res.data.data);
-      } catch {
-        toast.error('Failed to update config');
-      }
-    }
   };
 
   // ── 2-Tier Access Model ──
@@ -595,13 +412,6 @@ export default function InteractPage() {
 
   const currentFunctions = filterFunctions(parsedAbi?.functions[activeTab] ?? []);
 
-  const renderToggle = (checked: boolean, onChange: (c: boolean) => void) => (
-    <label className="toggle-switch">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      <span className="toggle-slider"></span>
-    </label>
-  );
-
   return (
     <PageWrapper
       title={`${t('nav.interact')}: ${activeContract.name}`}
@@ -705,217 +515,29 @@ export default function InteractPage() {
             </div>
           </div>
 
-          {/* Revoke Confirmation Modal */}
-          {revokeConfirm && (
-            <div className="modal-overlay" onClick={() => setRevokeConfirm(null)}>
-              <div className="modal-content revoke-modal" onClick={e => e.stopPropagation()}>
-                <div className="revoke-modal-icon">
-                  <HiOutlineExclamationTriangle size={32} />
-                </div>
-                <h3 className="revoke-modal-title">
-                  {revokeConfirm.type === 'guests'
-                    ? t('pages.interact.config.revoke_all_guests_title')
-                    : t('pages.interact.config.revoke_all_devs_title')}
-                </h3>
-                <p className="revoke-modal-msg">
-                  {revokeConfirm.type === 'guests'
-                    ? t('pages.interact.config.revoke_all_guests_msg')
-                    : t('pages.interact.config.revoke_all_devs_msg')}
-                </p>
-                <div className="revoke-modal-actions">
-                  <button className="btn btn-ghost" onClick={() => setRevokeConfirm(null)}>
-                    {t('pages.interact.config.cancel_revoke')}
-                  </button>
-                  <button className="btn btn-danger" onClick={handleConfirmRevoke}>
-                    {t('pages.interact.config.confirm_revoke')}
-                  </button>
-                </div>
-              </div>
-            </div>
+          {/* RIGHT: CONFIG SIDEBAR (Admin/Shared Dev Only) */}
+          {hasConfigAccess && isSidebarOpen && (
+            <ConfigSidebar
+              projectId={id!}
+              project={project}
+              contractAddress={contractAddress}
+              parsedAbi={parsedAbi}
+              currentFunctions={currentFunctions}
+              onProjectUpdate={setProject}
+              onClose={() => setIsSidebarOpen(false)}
+            />
           )}
 
-          {/* RIGHT: CONFIG SIDEBAR (Admin/Shared Dev Only) */}
-          {hasConfigAccess && (
-            <div className="interact-sidebar">
-              <div className="config-tabs-header">
-                <button
-                  className={`config-tab-btn ${configTab === 'global' ? 'active' : ''}`}
-                  onClick={() => setConfigTab('global')}
-                >
-                  {t('pages.interact.config.global')}
-                </button>
-                <button
-                  className={`config-tab-btn ${configTab === 'notes' ? 'active' : ''}`}
-                  onClick={() => setConfigTab('notes')}
-                >
-                  {t('pages.interact.config.notes')}
-                </button>
-              </div>
-
-              <div className="config-panel">
-                {configTab === 'global' && (
-                  <>
-                    {/* ═══ SECTION 1: Guest Admission (Ticket) ═══ */}
-                    <div className="config-group">
-                      <div className="config-section-title">
-                        <HiOutlineUsers size={16} /> {t('pages.interact.config.admission_guests')}
-                      </div>
-                      <div className="config-section-desc">{t('pages.interact.config.admission_guests_desc')}</div>
-
-                      <div className="config-input-group">
-                        <input
-                          className="input"
-                          placeholder={t('pages.interact.config.email_placeholder')}
-                          value={guestInviteEmail}
-                          onChange={e => setGuestInviteEmail(e.target.value)}
-                          onKeyDown={e => e.key === 'Enter' && handleInviteGuest()}
-                        />
-                        <button className="btn btn-primary btn-sm" onClick={handleInviteGuest}>{t('pages.interact.config.btn_invite')}</button>
-                      </div>
-
-                      {/* Invited Guest List */}
-                      {(globalConfig.invited_guests || []).length > 0 && (
-                        <div className="invited-list">
-                          {globalConfig.invited_guests.map((email: string) => (
-                            <div key={email} className="invited-chip">
-                              <span className="invited-chip-email">{email}</span>
-                              <button className="invited-chip-remove" onClick={() => handleRemoveGuest(email)} title={t('pages.interact.config.remove')}>
-                                <HiOutlineXMark size={14} />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="config-toggle-row" style={{ padding: '8px 0 0', border: 'none' }}>
-                        <div className="config-toggle-info">
-                          <span className="config-toggle-label" style={{ fontSize: '13px' }}>{t('pages.interact.config.allow_all')}</span>
-                        </div>
-                        {renderToggle(globalConfig.allow_all_guests, handleToggleAllowAllGuests)}
-                      </div>
-                    </div>
-
-                    {/* ═══ SECTION 2: Dev Admission (Ticket) ═══ */}
-                    <div className="config-group">
-                      <div className="config-section-title">
-                        <HiOutlineCommandLine size={16} /> {t('pages.interact.config.admission_devs')}
-                      </div>
-                      <div className="config-section-desc">{t('pages.interact.config.admission_devs_desc')}</div>
-
-                      <div className="config-input-group">
-                        <input
-                          className="input"
-                          placeholder={t('pages.interact.config.dev_email_placeholder')}
-                          value={devInviteEmail}
-                          onChange={e => setDevInviteEmail(e.target.value)}
-                          onKeyDown={e => e.key === 'Enter' && handleInviteDev()}
-                        />
-                        <button className="btn btn-secondary btn-sm" onClick={handleInviteDev}>
-                          {t('pages.interact.config.btn_invite')}
-                        </button>
-                      </div>
-
-                      {/* Shared Dev List */}
-                      {(project?.shared_devs || []).length > 0 && (
-                        <div className="invited-list">
-                          {project!.shared_devs.map((devId: string) => (
-                            <div key={devId} className="invited-chip invited-chip--dev">
-                              <span className="invited-chip-email">{devId}</span>
-                              <button className="invited-chip-remove" onClick={() => handleRemoveDev(devId)} title={t('pages.interact.config.remove')}>
-                                <HiOutlineXMark size={14} />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="config-toggle-row" style={{ padding: '8px 0 0', border: 'none' }}>
-                        <div className="config-toggle-info">
-                          <span className="config-toggle-label" style={{ fontSize: '13px' }}>{t('pages.interact.config.allow_all')}</span>
-                        </div>
-                        {renderToggle(globalConfig.allow_all_devs, handleToggleAllowAllDevs)}
-                      </div>
-                    </div>
-
-                    {/* ═══ SECTION 3: Global Access (Authorization) ═══ */}
-                    <div className="config-group highlight">
-                      <div className="config-section-title">
-                        <HiOutlineShieldCheck size={16} /> {t('pages.interact.config.global_access')}
-                      </div>
-                      <div className="config-section-desc">{t('pages.interact.config.global_access_desc')}</div>
-                      
-                      <div className="config-toggle-row">
-                        <div className="config-toggle-info">
-                          <span className="config-toggle-label">{t('pages.interact.config.read_access')}</span>
-                          <span className="config-toggle-desc">{t('pages.interact.config.read_desc')}</span>
-                        </div>
-                        {renderToggle(globalConfig.allow_read, (checked) => handleToggleGlobalAccess('allow_read', 'read', checked))}
-                      </div>
-
-                      <div className="config-toggle-row">
-                        <div className="config-toggle-info">
-                          <span className="config-toggle-label">{t('pages.interact.config.write_access')}</span>
-                          <span className="config-toggle-desc">{t('pages.interact.config.write_desc')}</span>
-                        </div>
-                        {renderToggle(globalConfig.allow_write, (checked) => handleToggleGlobalAccess('allow_write', 'write', checked))}
-                      </div>
-
-                      <div className="config-toggle-row">
-                        <div className="config-toggle-info">
-                          <span className="config-toggle-label">{t('pages.interact.config.payable_access')}</span>
-                          <span className="config-toggle-desc">{t('pages.interact.config.payable_desc')}</span>
-                        </div>
-                        {renderToggle(globalConfig.allow_payable, (checked) => handleToggleGlobalAccess('allow_payable', 'payable', checked))}
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {configTab === 'notes' && (
-                  <div className="fn-notes-list">
-                    {currentFunctions.length === 0 && (
-                      <div className="fn-empty">Select a category with functions to take notes.</div>
-                    )}
-                    {currentFunctions.map(fn => {
-                      const perm = getPermission(fn.name);
-                      const isOverridden = isOverriddenByGlobal(fn);
-                      const isSaving = savingPerm === fn.name;
-
-                      return (
-                        <div key={fn.name} className={`fn-note-card ${isSaving ? 'saving' : ''}`}>
-                          <div className="fn-note-header">
-                            <span>{fn.name}</span>
-                            {isSaving && <span className="fn-saving-tag">{t('common.saving')}...</span>}
-                          </div>
-
-                          {isOverridden ? (
-                            <div style={{ fontSize: '12px', color: 'var(--color-accent)', padding: '0.25rem 0' }}>
-                              ⚡ {t('pages.interact.config.global_inherit_warn') || 'Inheriting from Global Access Control'}
-                            </div>
-                          ) : (
-                            <div className="config-toggle-row" style={{ padding: 0, border: 'none', opacity: isSaving ? 0.5 : 1 }}>
-                              <div className="config-toggle-info">
-                                <span className="config-toggle-label" style={{ fontSize: '13px' }}>{t('pages.interact.config.allow_fn')}</span>
-                              </div>
-                              {renderToggle(perm?.isGlobalAllowed || false, (checked) => {
-                                handleUpdatePermission(fn.name, checked, '', perm?.note);
-                              })}
-                            </div>
-                          )}
-
-                          <textarea
-                            className="fn-note-textarea"
-                            placeholder={t('pages.interact.config.notes_placeholder')}
-                            defaultValue={perm?.note || ''}
-                            disabled={isSaving}
-                            onBlur={(e) => handleUpdatePermission(fn.name, perm?.isGlobalAllowed || false, '', e.target.value)}
-                          ></textarea>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
+          {hasConfigAccess && !isSidebarOpen && (
+            <div style={{ flex: '0 0 auto', marginTop: '1.5rem' }}>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => setIsSidebarOpen(true)}
+                style={{ position: 'sticky', top: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                <HiOutlineCog6Tooth size={20} />
+                {t('pages.interact.config.global')}
+              </button>
             </div>
           )}
         </div>
