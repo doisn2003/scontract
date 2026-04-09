@@ -109,9 +109,6 @@ export default function TransactionHistoryPage() {
             <HiOutlineClock className="tx-empty-icon" />
             <h3>Chưa có giao dịch nào</h3>
             <p>Hãy Deploy hoặc Interact với Smart Contract để bắt đầu ghi lịch sử.</p>
-            <Link to="/projects" className="btn btn-primary" style={{ marginTop: 12 }}>
-              Đến trang Projects
-            </Link>
           </div>
         ) : (
           <>

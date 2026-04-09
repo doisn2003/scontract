@@ -14,6 +14,7 @@ import type { ApiResponse, Project } from '../types';
 import { useAuth } from '../context/AuthContext';
 import ContractTabBar from '../components/Contract/ContractTabBar';
 import SmartContract from '../components/Contract/SmartContract';
+import UnauthorizedPage from './UnauthorizedPage';
 import './ProjectDetailPage.css';
 
 export default function ProjectDetailPage() {
@@ -22,6 +23,7 @@ export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasAccess, setHasAccess] = useState(true);
   const [activeContractId, setActiveContractId] = useState<string | null>(null);
 
   // Editing metadata states
@@ -37,6 +39,7 @@ export default function ProjectDetailPage() {
       const { data } = await api.get<ApiResponse<Project>>(`/projects/${id}`);
       if (data.success && data.data) {
         setProject(data.data);
+        setHasAccess(true);
         setEditName(data.data.name);
         setEditDesc(data.data.description || '');
         
@@ -45,8 +48,12 @@ export default function ProjectDetailPage() {
           setActiveContractId(data.data.contracts[0]._id);
         }
       }
-    } catch {
-      toast.error('Failed to load project');
+    } catch (err: any) {
+      if (err.response?.status === 404 || err.response?.status === 403) {
+        setHasAccess(false);
+      } else {
+        toast.error('Failed to load project');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -152,6 +159,10 @@ export default function ProjectDetailPage() {
         </div>
       </PageWrapper>
     );
+  }
+
+  if (!hasAccess) {
+    return <UnauthorizedPage />;
   }
 
   if (!project) {

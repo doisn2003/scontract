@@ -91,7 +91,51 @@
         "read": "Read",
         "write": "Write",
         "payable": "Payable"
-      }
+      },
+      "config": {
+        "global": "CẤU HÌNH ỦY QUYỀN",
+        "notes": "GHI CHÚ HÀM",
+        "admission_guests": "VÉ VÀO CỬA — GUEST",
+        "admission_guests_desc": "Mời khách bằng email. Họ vẫn cần được cấp quyền hàm bên dưới.",
+        "admission_devs": "VÉ VÀO CỬA — DEV",
+        "admission_devs_desc": "Developer có toàn quyền một khi được mời vào.",
+        "invite_guests": "MỜI KHÁCH",
+        "invite_devs": "MỜI DEV",
+        "email_placeholder": "guest@organization.com",
+        "dev_email_placeholder": "dev@crypto-lab.io",
+        "btn_invite": "THÊM",
+        "allow_all": "Cho phép tất cả",
+        "allow_fn": "Cho phép",
+        "global_access": "CẤP QUYỀN HÀM CHO GUEST",
+        "global_access_desc": "Chọn loại hàm mà guest được phép sử dụng",
+        "read_access": "Hàm Read",
+        "read_desc": "view / pure — truy vấn dữ liệu",
+        "write_access": "Hàm Write",
+        "write_desc": "nonpayable — thay đổi trạng thái",
+        "payable_access": "Hàm Payable",
+        "payable_desc": "payable — chuyển BNB",
+        "fn_permissions": "Phân quyền hàm",
+        "fn_notes": "Ghi chú hàm",
+        "notes_placeholder": "Giải thích cách hoạt động của hàm này (hỗ trợ Markdown)...",
+        "no_guests_yet": "Chưa mời khách nào.",
+        "no_devs_yet": "Chưa thêm developer nào.",
+        "remove": "Xóa",
+        "revoke_all_guests_title": "Thu hồi tất cả vé Guest?",
+        "revoke_all_guests_msg": "Tắt \"Cho phép tất cả\" sẽ XÓA TOÀN BỘ danh sách guest đã mời. Không thể hoàn tác.",
+        "revoke_all_devs_title": "Thu hồi tất cả vé Dev?",
+        "revoke_all_devs_msg": "Tắt \"Cho phép tất cả\" sẽ XÓA TOÀN BỘ developer đã mời. Không thể hoàn tác.",
+        "confirm_revoke": "Xác nhận thu hồi",
+        "cancel_revoke": "Hủy bỏ",
+        "all_revoked_guests": "Đã thu hồi tất cả vé mời guest.",
+        "all_revoked_devs": "Tất cả quyền truy cập của lập trình viên đã bị thu hồi."
+      },
+      "unauthorized": {
+        "title": "Truy cập bị hạn chế",
+        "msg": "Có vẻ như bạn không có quyền truy cập vào hợp đồng thông minh này. Môi trường này được dành riêng cho các nhà phát triển được ủy quyền và khách mời.",
+        "contact_prefix": "Nếu đây là một sự nhầm lẫn, vui lòng liên hệ với chúng tôi:",
+        "back_to_dashboard": "Quay lại Bảng điều khiển"
+      },
+      "empty": "Không có hàm {{type}} nào trong hợp đồng này."
     }
   },
   "nav": {
@@ -212,4 +256,3 @@
     "deployer": "Người triển khai"
   }
 }
-
