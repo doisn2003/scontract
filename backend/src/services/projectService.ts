@@ -401,12 +401,35 @@ export async function getProjectById(projectId: string, userId: string) {
   // Access control
   const isOwner = project.userId.toString() === userId.toString();
   const isSharedDev = project.shared_devs?.some((devId: any) => devId.toString() === userId.toString());
-  const hasDeployed = project.contracts.some((c: any) => c.status === 'deployed');
 
-  if (!isOwner && !isSharedDev && !hasDeployed) {
+  if (isOwner || isSharedDev) {
+    return project;
+  }
+
+  // Strict Evaluation for Guests/Others
+  const User = (await import('../models/User.js')).default;
+  const queryingUser = await User.findById(userId).select('email role');
+  if (!queryingUser) return null;
+
+  const globalConfig = (project as any).global_access_config || {};
+
+  if (queryingUser.role !== 'guest') {
+    if (globalConfig.allow_all_devs) return project;
     return null;
   }
-  return project;
+
+  if (globalConfig.allow_all_guests) return project;
+  
+  const userEmail = queryingUser.email;
+  if (globalConfig.invited_guests?.includes(userEmail)) return project;
+
+  const hasLocalPerm = project.guest_permissions?.some((p: any) => 
+    p.isGlobalAllowed || p.allowedGuestList?.includes(userEmail)
+  );
+
+  if (hasLocalPerm) return project;
+
+  return null;
 }
 
 export async function getDeployedProjects() {
@@ -431,7 +454,11 @@ export async function updateProject(
     name?: string; 
     description?: string; 
     guest_permissions?: any[]; 
-    shared_devs?: string[];
+    global_access_config?: any;
+    add_shared_dev_email?: string;
+    clear_shared_devs?: boolean;
+    remove_shared_dev_id?: string;
+    remove_invited_guest?: string;
   }
 ) {
   const project = await findProjectWithAuth(projectId, userId);
@@ -440,7 +467,36 @@ export async function updateProject(
   if (updates.name !== undefined) project.name = updates.name;
   if (updates.description !== undefined) project.description = updates.description;
   if (updates.guest_permissions !== undefined) project.guest_permissions = updates.guest_permissions;
-  if (updates.shared_devs !== undefined) project.shared_devs = updates.shared_devs as any;
+  if (updates.global_access_config !== undefined) project.global_access_config = updates.global_access_config;
+  
+  // Revoke ALL devs (clear shared_devs array)
+  if (updates.clear_shared_devs) {
+    project.shared_devs = [] as any;
+  }
+
+  // Remove a single dev by ID
+  if (updates.remove_shared_dev_id) {
+    project.shared_devs = project.shared_devs.filter(
+      (devId: any) => devId.toString() !== updates.remove_shared_dev_id
+    ) as any;
+  }
+
+  // Remove a single invited guest by email
+  if (updates.remove_invited_guest && project.global_access_config) {
+    project.global_access_config.invited_guests = (
+      project.global_access_config.invited_guests || []
+    ).filter((email: string) => email !== updates.remove_invited_guest);
+  }
+
+  if (updates.add_shared_dev_email) {
+    const User = (await import('../models/User.js')).default;
+    const devUser = await User.findOne({ email: updates.add_shared_dev_email }).select('_id');
+    if (!devUser) throw new Error('Developer email not found');
+    
+    if (!project.shared_devs.includes(devUser._id)) {
+      project.shared_devs.push(devUser._id);
+    }
+  }
 
   await project.save();
   return project;

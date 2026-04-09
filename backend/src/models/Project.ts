@@ -83,8 +83,17 @@ const projectSchema = new Schema<IProject>(
         methodName: { type: String, required: true },
         isGlobalAllowed: { type: Boolean, default: false },
         allowedGuestList: { type: [String], default: [] }, // Emails of allowed guests
+        note: { type: String, default: '' }, // Markdown explanations
       }
     ],
+    global_access_config: {
+      invited_guests: { type: [String], default: [] },
+      allow_all_guests: { type: Boolean, default: false },
+      allow_all_devs: { type: Boolean, default: false },
+      allow_read: { type: Boolean, default: false },
+      allow_write: { type: Boolean, default: false },
+      allow_payable: { type: Boolean, default: false },
+    },
     shared_devs: {
       type: [Schema.Types.ObjectId],
       ref: 'User',

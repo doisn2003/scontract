@@ -91,19 +91,49 @@ export const getProject = async (req: Request, res: Response): Promise<void> => 
     const project = await projectService.getProjectById(projectId, userId);
     if (!project) { sendError(res, 'Project not found', 404); return; }
 
-    // Backend filtering for guest users
+    // Backend filtering for guest users — 2-tier access model
     if (authReq.user?.role === 'guest') {
+      const globalConfig = (project as any).global_access_config || {};
+      const userEmail = authReq.user?.email || '';
+
+      // ── Tier 1: Admission ("ticket") check ──
+      const hasAdmission = 
+        globalConfig.allow_all_guests === true || 
+        (globalConfig.invited_guests || []).includes(userEmail);
+
       project.contracts = project.contracts.map((c: any) => {
-        if (c.abi) {
-          c.abi = c.abi.filter((fn: any) => {
-            if (fn.type !== 'function') return true; // Keep events, constructors, etc.
-            const perm = project.guest_permissions?.find((p: any) => p.contractAddress === c.contractAddress && p.methodName === fn.name);
-            if (!perm) return false;
-            if (perm.isGlobalAllowed) return true;
-            if (perm.allowedGuestList.includes(authReq.user?.email || '')) return true;
-            return false;
-          });
+        if (!c.abi) return c;
+
+        if (!hasAdmission) {
+          // No ticket → no functions visible at all
+          c.abi = c.abi.filter((fn: any) => fn.type !== 'function');
+          return c;
         }
+
+        // ── Tier 2: Function-level authorization ──
+        c.abi = c.abi.filter((fn: any) => {
+          if (fn.type !== 'function') return true; // Keep events, constructors, etc.
+
+          // Check global function-type toggles
+          if (fn.stateMutability === 'view' || fn.stateMutability === 'pure') {
+            if (globalConfig.allow_read) return true;
+          } else if (fn.stateMutability === 'payable') {
+            if (globalConfig.allow_payable) return true;
+          } else {
+            if (globalConfig.allow_write) return true;
+          }
+
+          // Check per-function permissions (Function Notes tab)
+          const perm = project.guest_permissions?.find(
+            (p: any) => p.contractAddress === c.contractAddress && p.methodName === fn.name
+          );
+          if (!perm) return false;
+          if (perm.isGlobalAllowed) return true;
+          if (perm.allowedGuestList?.includes(userEmail)) return true;
+
+          return false;
+        });
+
         return c;
       }) as any;
     }
@@ -126,7 +156,16 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
     if (!userId) { sendError(res, 'Unauthorized', 401); return; }
 
     const projectId = req.params['id'] as string;
-    const updates = req.body as { name?: string; description?: string; guest_permissions?: any[] };
+    const updates = req.body as { 
+      name?: string; 
+      description?: string; 
+      guest_permissions?: any[];
+      global_access_config?: any;
+      add_shared_dev_email?: string;
+      clear_shared_devs?: boolean;
+      remove_shared_dev_id?: string;
+      remove_invited_guest?: string;
+    };
 
     const project = await projectService.updateProject(projectId, userId, updates);
     sendSuccess(res, 'Project updated successfully', project);

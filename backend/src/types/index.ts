@@ -80,6 +80,16 @@ export interface IGuestPermission {
   methodName: string;
   isGlobalAllowed: boolean;
   allowedGuestList: string[];
+  note: string;
+}
+
+export interface IGlobalAccessConfig {
+  invited_guests: string[];
+  allow_all_guests: boolean;
+  allow_all_devs: boolean;
+  allow_read: boolean;
+  allow_write: boolean;
+  allow_payable: boolean;
 }
 
 // ========================
@@ -94,6 +104,7 @@ export interface IProject extends Document {
   network: string;
   contracts: Types.DocumentArray<ISmartContract>;
   guest_permissions: IGuestPermission[];
+  global_access_config: IGlobalAccessConfig;
   shared_devs: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
