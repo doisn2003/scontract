@@ -28,6 +28,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm'; 
 import UnauthorizedPage from './UnauthorizedPage';
 import ConfigSidebar from '../components/Contract/ConfigSidebar';
+import FaucetPanel from '../components/Contract/FaucetPanel';
 import { HiOutlineCog6Tooth } from 'react-icons/hi2';
 
 type TabKey = 'read' | 'write' | 'payable';
@@ -76,7 +77,7 @@ export default function InteractPage() {
   const parsedAbi = abi ? parseABI(abi) : null;
   const isOwner = user?._id === project?.userId;
   const isGuest = user?.role === 'guest';
-  const isSharedDev = project?.shared_devs?.includes(user?._id || '');
+  const isSharedDev = project?.shared_devs?.includes(user?._id || '') ?? false;
   const hasConfigAccess = isOwner || isSharedDev;
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -138,31 +139,35 @@ export default function InteractPage() {
     payable: parsedAbi?.functions.payable.length ?? 0,
   };
 
+  const getFnSig = (fn: ParsedFunction) => `${fn.name}(${fn.inputs.map(i => i.type).join(',')})`;
+  const getInpKey = (inp: {name: string, type: string}, idx: number) => inp.name || `__arg${idx}`;
+
   // ── Read function (no MetaMask needed) ──
   const handleRead = async (fn: ParsedFunction) => {
     if (!contractAddress || !abi) return;
 
-    setLoadingFn(s => ({ ...s, [fn.name]: true }));
-    setResults(s => ({ ...s, [fn.name]: {} }));
+    const fnSig = getFnSig(fn);
+    setLoadingFn(s => ({ ...s, [fnSig]: true }));
+    setResults(s => ({ ...s, [fnSig]: {} }));
 
     try {
       const rpcUrl = 'https://data-seed-prebsc-1-s1.bnbchain.org:8545/';
       const provider = new ethers.JsonRpcProvider(rpcUrl);
       const contract = new ethers.Contract(contractAddress, abi as any, provider);
 
-      const args = (fn.inputs || []).map(inp => {
-        const val = inputValues[fn.name]?.[inp.name] ?? '';
+      const args = (fn.inputs || []).map((inp, idx) => {
+        const val = inputValues[fnSig]?.[getInpKey(inp, idx)] ?? '';
         return parseInputValue(inp.type, val);
       });
 
-      const result = await contract[fn.name](...args);
+      const result = await contract.getFunction(fnSig)(...args);
       const formatted = typeof result === 'bigint' ? result.toString() : String(result);
 
-      setResults(s => ({ ...s, [fn.name]: { value: formatted } }));
+      setResults(s => ({ ...s, [fnSig]: { value: formatted } }));
     } catch (err: any) {
-      setResults(s => ({ ...s, [fn.name]: { error: err.reason || err.message || String(err) } }));
+      setResults(s => ({ ...s, [fnSig]: { error: err.reason || err.message || String(err) } }));
     } finally {
-      setLoadingFn(s => ({ ...s, [fn.name]: false }));
+      setLoadingFn(s => ({ ...s, [fnSig]: false }));
     }
   };
 
@@ -180,16 +185,17 @@ export default function InteractPage() {
       return;
     }
 
-    setLoadingFn(s => ({ ...s, [fn.name]: true }));
-    setResults(s => ({ ...s, [fn.name]: {} }));
+    const fnSig = getFnSig(fn);
+    setLoadingFn(s => ({ ...s, [fnSig]: true }));
+    setResults(s => ({ ...s, [fnSig]: {} }));
 
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const contract = new ethers.Contract(contractAddress, abi as any, signer);
 
-      const args = (fn.inputs || []).map(inp => {
-        const val = inputValues[fn.name]?.[inp.name] ?? '';
+      const args = (fn.inputs || []).map((inp, idx) => {
+        const val = inputValues[fnSig]?.[getInpKey(inp, idx)] ?? '';
         return parseInputValue(inp.type, val);
       });
 
@@ -199,10 +205,10 @@ export default function InteractPage() {
         overrides.value = ethers.parseEther(payableValue);
       }
 
-      const tx = await contract[fn.name](...args, overrides);
+      const tx = await contract.getFunction(fnSig)(...args, overrides);
       toast.success(`Transaction sent: ${tx.hash.slice(0, 10)}...`);
 
-      setResults(s => ({ ...s, [fn.name]: { txHash: tx.hash } }));
+      setResults(s => ({ ...s, [fnSig]: { txHash: tx.hash } }));
 
       // Wait for confirmation
       const receipt = await tx.wait();
@@ -216,7 +222,7 @@ export default function InteractPage() {
           contractId,
           txHash: tx.hash,
           functionName: fn.name,
-          args: (fn.inputs || []).map(inp => inputValues[fn.name]?.[inp.name] ?? ''),
+          args: (fn.inputs || []).map((inp, idx) => inputValues[fnSig]?.[getInpKey(inp, idx)] ?? ''),
           gasUsed,
         });
       } catch {
@@ -224,18 +230,18 @@ export default function InteractPage() {
       }
     } catch (err: any) {
       const msg = err.reason || err.message || String(err);
-      setResults(s => ({ ...s, [fn.name]: { error: msg } }));
+      setResults(s => ({ ...s, [fnSig]: { error: msg } }));
       toast.error(msg.length > 60 ? msg.slice(0, 60) + '...' : msg);
     } finally {
-      setLoadingFn(s => ({ ...s, [fn.name]: false }));
+      setLoadingFn(s => ({ ...s, [fnSig]: false }));
     }
   };
 
   // Input change handler
-  const setInput = (fnName: string, paramName: string, value: string) => {
+  const setInput = (fnSig: string, paramName: string, value: string) => {
     setInputValues(s => ({
       ...s,
-      [fnName]: { ...s[fnName], [paramName]: value },
+      [fnSig]: { ...(s[fnSig] || {}), [paramName]: value },
     }));
   };
 
@@ -282,9 +288,10 @@ export default function InteractPage() {
 
   const renderFunctionCard = (fn: ParsedFunction, isWrite: boolean) => {
     const perm = getPermission(fn.name);
+    const fnSig = getFnSig(fn);
 
     return (
-      <div key={fn.name} className="fn-card">
+      <div key={fnSig} className="fn-card">
         <div className="fn-card-header">
           <span className="fn-name mono">{fn.name}</span>
           <span className={`badge ${fn.type === 'read' ? 'badge-info' : fn.type === 'payable' ? 'badge-error' : 'badge-warning'}`}>
@@ -295,19 +302,22 @@ export default function InteractPage() {
         {/* Inputs */}
         {fn.inputs.length > 0 && (
           <div className="fn-inputs">
-            {fn.inputs.map(inp => (
-              <div key={inp.name} className="fn-input-row">
-                <label className="fn-input-label">
-                  {inp.name} <span className="fn-input-type">({inp.type})</span>
-                </label>
-                <input
-                  className="input"
-                  placeholder={getTypeHint(inp.type)}
-                  value={inputValues[fn.name]?.[inp.name] ?? ''}
-                  onChange={(e) => setInput(fn.name, inp.name, e.target.value)}
-                />
-              </div>
-            ))}
+            {fn.inputs.map((inp, idx) => {
+              const inpKey = getInpKey(inp, idx);
+              return (
+                <div key={inpKey} className="fn-input-row">
+                  <label className="fn-input-label">
+                    {inp.name || `arg${idx}`} <span className="fn-input-type">({inp.type})</span>
+                  </label>
+                  <input
+                    className="input"
+                    placeholder={getTypeHint(inp.type)}
+                    value={inputValues[fnSig]?.[inpKey] ?? ''}
+                    onChange={(e) => setInput(fnSig, inpKey, e.target.value)}
+                  />
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -320,8 +330,8 @@ export default function InteractPage() {
             <input
               className="input"
               placeholder="0.01"
-              value={inputValues[fn.name]?.['__value'] ?? ''}
-              onChange={(e) => setInput(fn.name, '__value', e.target.value)}
+              value={inputValues[fnSig]?.['__value'] ?? ''}
+              onChange={(e) => setInput(fnSig, '__value', e.target.value)}
             />
           </div>
         )}
@@ -331,12 +341,12 @@ export default function InteractPage() {
           <button
             className={`btn ${isWrite ? 'btn-primary' : 'btn-secondary'} fn-btn`}
             onClick={() => isWrite
-              ? handleWrite(fn, inputValues[fn.name]?.['__value'])
+              ? handleWrite(fn, inputValues[fnSig]?.['__value'])
               : handleRead(fn)
             }
-            disabled={loadingFn[fn.name]}
+            disabled={loadingFn[fnSig]}
           >
-            {loadingFn[fn.name] ? (
+            {loadingFn[fnSig] ? (
               <><span className="spinner" style={{ width: 14, height: 14 }} /> Processing...</>
             ) : isWrite ? (
               <><HiOutlinePlay /> Execute</>
@@ -349,41 +359,41 @@ export default function InteractPage() {
               contractAddress={contractAddress}
               abi={abi as unknown[]}
               fn={fn}
-              args={(fn.inputs || []).map(inp => {
-                const val = inputValues[fn.name]?.[inp.name] ?? '';
+              args={(fn.inputs || []).map((inp, idx) => {
+                const val = inputValues[fnSig]?.[getInpKey(inp, idx)] ?? '';
                 try { return parseInputValue(inp.type, val); } catch { return val; }
               })}
-              payableValue={inputValues[fn.name]?.['__value']}
+              payableValue={inputValues[fnSig]?.['__value']}
               isWrite={isWrite}
             />
           )}
         </div>
 
         {/* Result */}
-        {results[fn.name] && (
-          <div className={`fn-result ${results[fn.name].error ? 'error' : 'success'}`}>
-            {results[fn.name].value !== undefined && (
+        {results[fnSig] && (
+          <div className={`fn-result ${results[fnSig].error ? 'error' : 'success'}`}>
+            {results[fnSig].value !== undefined && (
               <div className="fn-result-value">
                 <strong>Result:</strong>
-                <span className="mono">{results[fn.name].value}</span>
+                <span className="mono">{results[fnSig].value}</span>
               </div>
             )}
-            {results[fn.name].txHash && (
+            {results[fnSig].txHash && (
               <div className="fn-result-tx">
                 <strong>Tx Hash:</strong>
                 <a
-                  href={`https://testnet.bscscan.com/tx/${results[fn.name].txHash}`}
+                  href={`https://testnet.bscscan.com/tx/${results[fnSig].txHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mono"
                 >
-                  {results[fn.name].txHash!.slice(0, 14)}...
+                  {results[fnSig].txHash!.slice(0, 14)}...
                   <HiOutlineArrowTopRightOnSquare />
                 </a>
                 <button
                   className="copy-btn"
                   onClick={() => {
-                    navigator.clipboard.writeText(results[fn.name].txHash!);
+                    navigator.clipboard.writeText(results[fnSig].txHash!);
                     toast.success('Tx hash copied!');
                   }}
                 >
@@ -391,9 +401,9 @@ export default function InteractPage() {
                 </button>
               </div>
             )}
-            {results[fn.name].error && (
+            {results[fnSig].error && (
               <div className="fn-result-error">
-                <HiOutlineExclamationTriangle /> {results[fn.name].error}
+                <HiOutlineExclamationTriangle /> {results[fnSig].error}
               </div>
             )}
           </div>
@@ -482,6 +492,17 @@ export default function InteractPage() {
                 <HiOutlineArrowTopRightOnSquare /> BscScan
               </a>
             </div>
+
+            {/* Faucet Panel */}
+            {activeContract && (hasConfigAccess || activeContract.faucetConfig?.isEnabled) && (
+              <FaucetPanel 
+                projectId={id!}
+                contract={activeContract}
+                isDevConfig={hasConfigAccess}
+                onUpdate={fetchProject}
+                devAddress={typeof project.walletId === 'object' ? project.walletId.address : project.walletId}
+              />
+            )}
 
             {/* Tabs */}
             <div className="interact-tabs">

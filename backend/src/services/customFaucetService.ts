@@ -39,7 +39,7 @@ export async function executeCustomFaucet(
 
   const recentLog = await CustomFaucetLog.findOne({
     contractId,
-    $or: [{ userId: requesterUserId }, { ipAddress }],
+    targetAddress,
     requestedAt: { $gte: cutoffTime }
   });
 
@@ -64,9 +64,12 @@ export async function executeCustomFaucet(
 
   let tx;
   let amountLabel = '';
+  const isERC20 = config.tokenType === 'ERC20';
+  const decimals = isERC20 ? 18 : 0;
+  
   const parsedAmount = config.amountPerRequest && config.amountPerRequest !== '0' 
-      ? ethers.parseUnits(config.amountPerRequest) 
-      : ethers.parseUnits('1'); // fallback to 1 wei/1 item if not set
+      ? ethers.parseUnits(config.amountPerRequest, decimals) 
+      : ethers.parseUnits('1', decimals); // fallback to 1 item if not set
 
   // 5. Route by Token Type
   try {
@@ -83,8 +86,14 @@ export async function executeCustomFaucet(
       const mintFn = config.mintFunctionName || 'mint';
       const tokenId = config.faucetTokenId || '0';
       amountLabel = `${ethers.formatUnits(parsedAmount, 0)} ERC1155 (ID:${tokenId})`;
-      // Standard signature: mint(address to, uint256 id, uint256 amount, bytes data)
-      tx = await ethersContract[mintFn](targetAddress, tokenId, parsedAmount, '0x00');
+      
+      if (mintFn === 'safeTransferFrom') {
+        // signature: safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes data)
+        tx = await ethersContract.safeTransferFrom(deployerWallet.address, targetAddress, tokenId, parsedAmount, '0x');
+      } else {
+        // Standard signature: mint(address to, uint256 id, uint256 amount, bytes data)
+        tx = await ethersContract[mintFn](targetAddress, tokenId, parsedAmount, '0x');
+      }
     }
 
     const receipt = await tx.wait();
@@ -93,8 +102,7 @@ export async function executeCustomFaucet(
     await CustomFaucetLog.create({
       projectId,
       contractId,
-      userId: requesterUserId,
-      ipAddress,
+      targetAddress,
       amountLabel,
       requestedAt: new Date()
     });

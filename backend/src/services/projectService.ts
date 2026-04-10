@@ -284,7 +284,7 @@ export async function updateContract(
   projectId: string,
   userId: string,
   contractId: string,
-  updates: { name?: string; soliditySource?: string }
+  updates: { name?: string; soliditySource?: string; faucetConfig?: any }
 ) {
   const project = await findProjectWithAuth(projectId, userId);
   if (!project) throw new Error('Project not found');
@@ -306,6 +306,11 @@ export async function updateContract(
     contract.abi = null as any;
     contract.bytecode = null as any;
     contract.status = 'created';
+  }
+
+  if (updates.faucetConfig !== undefined) {
+    const currentConfig = contract.faucetConfig ? JSON.parse(JSON.stringify(contract.faucetConfig)) : {};
+    contract.set('faucetConfig', { ...currentConfig, ...updates.faucetConfig });
   }
 
   await project.save();

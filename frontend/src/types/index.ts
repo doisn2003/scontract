@@ -71,6 +71,16 @@ export interface IGlobalAccessConfig {
   allow_payable: boolean;
 }
 
+export interface IFaucetConfig {
+  isEnabled: boolean;
+  tokenType: string;
+  amountPerRequest: string;
+  cooldownHours: number;
+  maxTotalDrained: string;
+  mintFunctionName: string;
+  faucetTokenId?: string;
+}
+
 export interface SmartContract {
   _id: string;
   name: string;
@@ -82,6 +92,7 @@ export interface SmartContract {
   status: ProjectStatus;
   createdAt: string;
   updatedAt: string;
+  faucetConfig?: IFaucetConfig;
 }
 
 export interface Project {

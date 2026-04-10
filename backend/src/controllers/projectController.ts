@@ -261,7 +261,7 @@ export const updateContract = async (req: Request, res: Response): Promise<void>
 
     const projectId = req.params['id'] as string;
     const contractId = req.params['contractId'] as string;
-    const updates = req.body as { name?: string; soliditySource?: string };
+    const updates = req.body as { name?: string; soliditySource?: string; faucetConfig?: any };
 
     const project = await projectService.updateContract(projectId, userId, contractId, updates);
     sendSuccess(res, 'Contract updated successfully', project);
