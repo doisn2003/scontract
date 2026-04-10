@@ -135,8 +135,7 @@ export interface ICustomFaucetLog extends Document {
   _id: Types.ObjectId;
   projectId: Types.ObjectId;
   contractId: Types.ObjectId;
-  userId: Types.ObjectId;
-  ipAddress: string;
+  targetAddress: string;
   amountLabel: string;
   requestedAt: Date;
 }
