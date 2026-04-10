@@ -15,7 +15,7 @@ import { ethers } from 'ethers';
 import Project from '../models/Project.js';
 import Wallet from '../models/Wallet.js';
 import { decrypt } from '../utils/encryption.js';
-import { extractSolidityVersion, extractContractName, repairAddressChecksums } from '../utils/solidityParser.js';
+import { extractSolidityVersion, extractContractName, repairAddressChecksums, analyzeTokenType } from '../utils/solidityParser.js';
 import { compileContract } from './sandboxService.js';
 import { createTransaction, getBnbPriceUSD } from './transactionService.js';
 import type { ISmartContract } from '../types/index.js';
@@ -110,7 +110,13 @@ export async function compileContract_(projectId: string, userId: string, contra
   contract.name = contractName;
   contract.solidityVersion = extractSolidityVersion(contract.soliditySource);
   contract.status = 'compiled';
-
+  
+  if (!contract.faucetConfig) {
+    contract.faucetConfig = {} as any;
+  }
+  contract.faucetConfig!.tokenType = analyzeTokenType(result.abi as any[]);
+  contract.faucetConfig!.isEnabled = false; // ensure it is off by default
+  
   await project.save();
 
   return {

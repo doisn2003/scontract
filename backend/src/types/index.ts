@@ -62,6 +62,16 @@ export interface IWallet extends Document {
 // ========================
 // Smart Contract (sub-document of Project)
 // ========================
+export interface IFaucetConfig {
+  isEnabled: boolean;
+  tokenType: string;
+  amountPerRequest: string;
+  cooldownHours: number;
+  maxTotalDrained: string;
+  mintFunctionName: string;
+  faucetTokenId?: string;
+}
+
 export interface ISmartContract extends Document {
   _id: Types.ObjectId;
   name: string;
@@ -71,6 +81,7 @@ export interface ISmartContract extends Document {
   contractAddress: string | null;
   solidityVersion: string | null;
   status: ProjectStatus;
+  faucetConfig?: IFaucetConfig;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -117,6 +128,16 @@ export interface IFaucetLog extends Document {
   ipAddress: string;
   txHash: string;
   amount: string;
+  requestedAt: Date;
+}
+
+export interface ICustomFaucetLog extends Document {
+  _id: Types.ObjectId;
+  projectId: Types.ObjectId;
+  contractId: Types.ObjectId;
+  userId: Types.ObjectId;
+  ipAddress: string;
+  amountLabel: string;
   requestedAt: Date;
 }
 

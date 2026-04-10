@@ -96,3 +96,37 @@ export function repairAddressChecksums(source: string): string {
   
   return repairedSource;
 }
+
+/**
+ * Analyze an ABI to determine its common token standard interface.
+ * Returns 'ERC20', 'ERC721', 'ERC1155', or 'UNKNOWN'
+ */
+export function analyzeTokenType(abi: any[]): string {
+  if (!abi || !Array.isArray(abi)) return 'UNKNOWN';
+
+  const functions = abi
+    .filter(item => item.type === 'function')
+    .map(item => {
+      // Signature is name(type1,type2)
+      const inputs = item.inputs?.map((i: any) => i.type).join(',') || '';
+      return `${item.name}(${inputs})`;
+    });
+
+  // ERC-1155 requires safeBatchTransferFrom and balanceOfBatch
+  const is1155 = functions.some(f => f.startsWith('safeBatchTransferFrom(')) &&
+                 functions.some(f => f.startsWith('balanceOfBatch('));
+  if (is1155) return 'ERC1155';
+
+  // ERC-721 requires ownerOf and safeTransferFrom
+  const is721 = functions.some(f => f.startsWith('ownerOf(')) &&
+                functions.some(f => f.startsWith('safeTransferFrom('));
+  if (is721) return 'ERC721';
+
+  // ERC-20 requires totalSupply, balanceOf, transfer, transferFrom
+  const is20 = functions.some(f => f.startsWith('totalSupply(')) &&
+               functions.some(f => f.startsWith('balanceOf(address)')) &&
+               functions.some(f => f.startsWith('transfer(address,uint256)'));
+  if (is20) return 'ERC20';
+
+  return 'UNKNOWN';
+}
