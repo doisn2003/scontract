@@ -15,7 +15,7 @@ import { ethers } from 'ethers';
 import Project from '../models/Project.js';
 import Wallet from '../models/Wallet.js';
 import { decrypt } from '../utils/encryption.js';
-import { extractSolidityVersion, extractContractName, repairAddressChecksums } from '../utils/solidityParser.js';
+import { extractSolidityVersion, extractContractName, repairAddressChecksums, analyzeTokenType } from '../utils/solidityParser.js';
 import { compileContract } from './sandboxService.js';
 import { createTransaction, getBnbPriceUSD } from './transactionService.js';
 import type { ISmartContract } from '../types/index.js';
@@ -110,7 +110,13 @@ export async function compileContract_(projectId: string, userId: string, contra
   contract.name = contractName;
   contract.solidityVersion = extractSolidityVersion(contract.soliditySource);
   contract.status = 'compiled';
-
+  
+  if (!contract.faucetConfig) {
+    contract.faucetConfig = {} as any;
+  }
+  contract.faucetConfig!.tokenType = analyzeTokenType(result.abi as any[]);
+  contract.faucetConfig!.isEnabled = false; // ensure it is off by default
+  
   await project.save();
 
   return {
@@ -278,7 +284,7 @@ export async function updateContract(
   projectId: string,
   userId: string,
   contractId: string,
-  updates: { name?: string; soliditySource?: string }
+  updates: { name?: string; soliditySource?: string; faucetConfig?: any }
 ) {
   const project = await findProjectWithAuth(projectId, userId);
   if (!project) throw new Error('Project not found');
@@ -300,6 +306,11 @@ export async function updateContract(
     contract.abi = null as any;
     contract.bytecode = null as any;
     contract.status = 'created';
+  }
+
+  if (updates.faucetConfig !== undefined) {
+    const currentConfig = contract.faucetConfig ? JSON.parse(JSON.stringify(contract.faucetConfig)) : {};
+    contract.set('faucetConfig', { ...currentConfig, ...updates.faucetConfig });
   }
 
   await project.save();

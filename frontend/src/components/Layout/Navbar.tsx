@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
-import { HiOutlineCube, HiOutlineSun, HiOutlineMoon, HiOutlineLanguage } from 'react-icons/hi2';
+import { useState } from 'react';
+import { HiOutlineSun, HiOutlineMoon, HiOutlineLanguage } from 'react-icons/hi2';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import MetaMaskButton from '../MetaMask/MetaMaskButton';
 import './Navbar.css';
 
@@ -12,6 +14,8 @@ interface NavbarProps {
 export default function Navbar({ userName }: NavbarProps) {
   const { i18n } = useTranslation();
   const { theme, toggleTheme } = useTheme();
+  const { logout } = useAuth();
+  const [showLogout, setShowLogout] = useState(false);
 
   const toggleLanguage = () => {
     const nextLang = i18n.language === 'en' ? 'vi' : 'en';
@@ -21,12 +25,12 @@ export default function Navbar({ userName }: NavbarProps) {
   const initials = userName
     ? userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : '?';
-
+ 
   return (
     <nav className="navbar">
       <Link to="/dashboard" className="navbar-brand">
         <div className="navbar-logo">
-          <HiOutlineCube />
+          <img src="/favicon.svg" alt="SContract Logo" />
         </div>
         <div className="navbar-title">
           S<span>Contract</span>
@@ -56,9 +60,25 @@ export default function Navbar({ userName }: NavbarProps) {
         <MetaMaskButton />
         
         {userName && (
-          <div className="navbar-user">
-            <div className="navbar-avatar">{initials}</div>
-            <span>{userName}</span>
+          <div className="navbar-user-container">
+            <div className="navbar-user" onClick={() => setShowLogout(!showLogout)}>
+              <div className="navbar-avatar">{initials}</div>
+              <span>{userName}</span>
+            </div>
+            
+            {showLogout && (
+              <div className="navbar-user-dropdown">
+                <button 
+                  className="logout-btn" 
+                  onClick={() => {
+                    logout();
+                    setShowLogout(false);
+                  }}
+                >
+                  Đăng xuất
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

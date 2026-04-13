@@ -18,6 +18,7 @@ import {
   estimateDeployGas,
   reorderContracts,
 } from '../controllers/projectController.js';
+import { requestCustomFaucet } from '../controllers/customFaucetController.js';
 
 const router = Router();
 
@@ -44,5 +45,8 @@ router.put('/:id/contracts/reorder', requireDevOrAdmin, reorderContracts);      
 router.post('/:id/contracts/:contractId/compile', requireDevOrAdmin, compileContract);                // Compile
 router.post('/:id/contracts/:contractId/deploy', requireDevOrAdmin, deployContract);                  // Deploy
 router.get('/:id/contracts/:contractId/estimate-deploy', requireDevOrAdmin, estimateDeployGas);       // Gas estimate
+
+// ── Custom Faucet (Public for Authenticated Users) ───────────────────────
+router.post('/:id/contracts/:contractId/faucet', requestCustomFaucet);                                // Custom Faucet
 
 export default router;

@@ -136,6 +136,31 @@
         "contact_prefix": "If you believe this is a mistake, please reach out to us at:",
         "back_to_dashboard": "Return to Dashboard"
       },
+      "faucet": {
+        "title": "Custom Faucet Configuration",
+        "detected": "Detected",
+        "deploy_warning": "Please compile and deploy your contract first before configuring the Faucet. We need to analyze the ABI.",
+        "unknown_warning": "The Token Standard could not be recognized (Not ERC20, ERC721, or ERC1155). Automated faucet is unavailable.",
+        "enable": "Enable Custom Faucet for Public Users",
+        "amount_per_request": "Amount Per Request",
+        "cooldown": "Cooldown (Hours)",
+        "mint_fn": "Mint / Transfer Function Name",
+        "token_id": "Token ID to Mint / Transfer",
+        "save_config": "Save Config",
+        "saving": "Saving...",
+        "source_wallet": "Your Faucet Source Wallet:",
+        "balance": "Balance:",
+        "loading_balance": "Loading balance...",
+        "claim_title": "{{name}} Faucet",
+        "claim_desc": "This smart contract is configured as an automated faucet. You can claim <strong>{{amount}} {{token}}</strong> tokens for free to test the application.",
+        "target_placeholder": "0x... (Your Wallet Address)",
+        "claim_btn": "Claim Tokens",
+        "claiming": "Claiming...",
+        "toast_save_success": "Faucet configuration saved",
+        "toast_save_fail": "Failed to save faucet configuration",
+        "toast_claim_fail": "Faucet request failed",
+        "toast_claim_address_req": "Please enter a target address"
+      },
       "empty": "No {{type}} functions found in this contract."
     }
   },

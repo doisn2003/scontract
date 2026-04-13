@@ -8,7 +8,7 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import path from 'path';
-import Project from '../models/Project';
+import Project from '../models/Project.js';
 
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 

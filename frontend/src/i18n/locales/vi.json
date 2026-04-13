@@ -131,10 +131,35 @@
         "all_revoked_devs": "Tất cả quyền truy cập của lập trình viên đã bị thu hồi."
       },
       "unauthorized": {
-        "title": "Truy cập bị hạn chế",
-        "msg": "Có vẻ như bạn không có quyền truy cập vào hợp đồng thông minh này. Môi trường này được dành riêng cho các nhà phát triển được ủy quyền và khách mời.",
-        "contact_prefix": "Nếu đây là một sự nhầm lẫn, vui lòng liên hệ với chúng tôi:",
-        "back_to_dashboard": "Quay lại Bảng điều khiển"
+        "title": "Hạn Chế Truy Cập",
+        "msg": "Có vẻ như bạn không có đủ quyền hạn để xem hợp đồng thông minh này. Không gian này chỉ dành cho các nhà phát triển và khách được mời.",
+        "contact_prefix": "Nếu bạn cho rằng có sự nhầm lẫn, vui lòng liên hệ:",
+        "back_to_dashboard": "Quay lại Bảng Điều Khiển"
+      },
+      "faucet": {
+        "title": "Cấu Hình Faucet Tùy Chỉnh",
+        "detected": "Phát Hiện",
+        "deploy_warning": "Vui lòng biên dịch và triển khai hợp đồng của bạn trước khi cấu hình Faucet để chúng tôi có thể phân tích ABI.",
+        "unknown_warning": "Không thể nhận diện Chuẩn Token (Không phải ERC20, ERC721, hay ERC1155). Không khả dụng cho Faucet tự động.",
+        "enable": "Kích hoạt Faucet cho Người Dùng Công Khai",
+        "amount_per_request": "Khối lượng một lần tạo",
+        "cooldown": "Thời gian chờ (Giờ)",
+        "mint_fn": "Tên hàm Đúc / Chuyển",
+        "token_id": "Token ID",
+        "save_config": "Lưu Cấu Hình",
+        "saving": "Đang lưu...",
+        "source_wallet": "Ví nguồn của Faucet:",
+        "balance": "Số dư:",
+        "loading_balance": "Đang tải số dư...",
+        "claim_title": "Vòi nhận {{name}}",
+        "claim_desc": "Hợp đồng thông minh này được cấu hình như một vòi (faucet) tự động. Bạn có thể nhận <strong>{{amount}} {{token}}</strong> miễn phí để thử nghiệm hệ thống.",
+        "target_placeholder": "0x... (Địa chỉ Ví của Bạn)",
+        "claim_btn": "Nhận Token",
+        "claiming": "Đang xử lý...",
+        "toast_save_success": "Đã lưu cấu hình faucet",
+        "toast_save_fail": "Lưu cấu hình faucet thất bại",
+        "toast_claim_fail": "Yêu cầu faucet thất bại",
+        "toast_claim_address_req": "Vui lòng nhập địa chỉ đích"
       },
       "empty": "Không có hàm {{type}} nào trong hợp đồng này."
     }

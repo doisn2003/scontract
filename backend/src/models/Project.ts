@@ -37,6 +37,19 @@ const smartContractSchema = new Schema(
       default: 'created',
       required: true,
     },
+    faucetConfig: {
+      isEnabled: { type: Boolean, default: false },
+      tokenType: {
+        type: String,
+        enum: ['ERC20', 'ERC721', 'ERC1155', 'UNKNOWN'],
+        default: 'UNKNOWN',
+      },
+      amountPerRequest: { type: String, default: '0' },
+      cooldownHours: { type: Number, default: 24 },
+      maxTotalDrained: { type: String, default: '0' },
+      mintFunctionName: { type: String, default: 'mint' },
+      faucetTokenId: { type: String, default: '' },
+    },
   },
   {
     timestamps: true,
